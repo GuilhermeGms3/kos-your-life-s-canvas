@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import type { ComponentType } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   BookOpen,
@@ -40,6 +41,14 @@ import {
   Feather,
   ArrowLeft,
 } from "lucide-react";
+import {
+  INITIAL_PILLAR_INDEX,
+  PILLARS,
+  type KosDomain,
+  type KosIconName,
+  type Pillar,
+  type PillarId,
+} from "@/kos";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -55,206 +64,46 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-/* ---------- types ---------- */
+type IconComponent = ComponentType<{ className?: string; strokeWidth?: number }>;
 
-type PillarId =
-  | "knowledge"
-  | "experience"
-  | "creation"
-  | "memory"
-  | "discovery"
-  | "legacy";
-
-type Domain = {
-  id: string;
-  name: string;
-  blurb: string;
-  count: number;
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+const KOS_ICONS: Record<KosIconName, IconComponent> = {
+  "book-open": BookOpen,
+  "graduation-cap": GraduationCap,
+  "file-text": FileText,
+  "file-type": FileType,
+  atom: Atom,
+  sigma: Sigma,
+  cpu: Cpu,
+  brain: Brain,
+  gamepad: Gamepad2,
+  film: Film,
+  plane: Plane,
+  "calendar-days": CalendarDays,
+  trophy: Trophy,
+  image: ImageIcon,
+  clapperboard: Clapperboard,
+  sparkles: SparklesIcon,
+  "pen-line": PenLine,
+  "scroll-text": ScrollText,
+  code: Code2,
+  "folder-kanban": FolderKanban,
+  lightbulb: Lightbulb,
+  flask: FlaskConical,
+  palette: Palette,
+  music: Music,
+  clock: Clock3,
+  "notebook-pen": NotebookPen,
+  users: Users,
+  heart: Heart,
+  star: Star,
+  network: Network,
+  telescope: Telescope,
+  "git-branch": GitBranch,
+  link: Link2,
+  compass: Compass,
+  "book-marked": BookMarked,
+  feather: Feather,
 };
-
-type RecentEntity = {
-  kind: string;
-  title: string;
-  meta: string;
-};
-
-type Pillar = {
-  id: PillarId;
-  index: string; // "01"
-  name: string;
-  purpose: string;
-  tagline: string;
-  toneLabel: string; // "DEEP VIOLET · GENERATIVE ENERGY"
-  hue: string; // oklch base
-  hue2: string; // secondary
-  domains: Domain[];
-  recent: RecentEntity[];
-};
-
-/* ---------- data ---------- */
-
-const PILLARS: Pillar[] = [
-  {
-    id: "knowledge",
-    index: "01",
-    name: "Knowledge",
-    purpose: "Structured learning and intellectual growth.",
-    tagline: "What you've studied, read, understood.",
-    toneLabel: "COOL BLUE-VIOLET · ANALYTICAL",
-    hue: "oklch(0.7 0.16 265)",
-    hue2: "oklch(0.6 0.18 240)",
-    domains: [
-      { id: "books", name: "Books", blurb: "Volumes read, in flight, shelved.", count: 248, icon: BookOpen },
-      { id: "courses", name: "Courses", blurb: "Long-form study.", count: 17, icon: GraduationCap },
-      { id: "articles", name: "Articles", blurb: "Essays, papers, posts.", count: 612, icon: FileText },
-      { id: "pdfs", name: "PDFs", blurb: "Documents and references.", count: 84, icon: FileType },
-      { id: "concepts", name: "Concepts", blurb: "Ideas you've internalised.", count: 1402, icon: Brain },
-      { id: "math", name: "Mathematics", blurb: "Proofs, problems, methods.", count: 96, icon: Sigma },
-      { id: "physics", name: "Physics", blurb: "Laws, intuitions, models.", count: 73, icon: Atom },
-      { id: "programming", name: "Programming", blurb: "Languages, paradigms, craft.", count: 134, icon: Cpu },
-      { id: "psychology", name: "Psychology", blurb: "Mind, behaviour, self.", count: 58, icon: Brain },
-    ],
-    recent: [
-      { kind: "BOOK", title: "The Order of Time", meta: "Rovelli · ch. 6 of 13" },
-      { kind: "CONCEPT", title: "Emergence", meta: "linked to 38 entities" },
-      { kind: "PAPER", title: "Attention Is All You Need", meta: "annotated · 2025" },
-      { kind: "COURSE", title: "Linear Algebra — MIT 18.06", meta: "lecture 12" },
-      { kind: "ARTICLE", title: "Slow Media Manifesto", meta: "read · saved" },
-      { kind: "CONCEPT", title: "Anti-fragility", meta: "Taleb · 2 projects" },
-    ],
-  },
-  {
-    id: "experience",
-    index: "02",
-    name: "Experience",
-    purpose: "Lived reality and emotional memory.",
-    tagline: "Life experiences and consumption — what you watched, played, walked through, felt.",
-    toneLabel: "WARM MAGENTA-PURPLE · EMOTIONAL",
-    hue: "oklch(0.7 0.2 330)",
-    hue2: "oklch(0.6 0.22 350)",
-    domains: [
-      { id: "games", name: "Games", blurb: "Worlds inhabited.", count: 38, icon: Gamepad2 },
-      { id: "movies", name: "Movies", blurb: "Films and series watched.", count: 211, icon: Film },
-      { id: "travel", name: "Travel", blurb: "Journeys taken.", count: 14, icon: Plane },
-      { id: "events", name: "Events", blurb: "Shows, concerts, gatherings.", count: 27, icon: CalendarDays },
-      { id: "achievements", name: "Achievements", blurb: "Milestones earned.", count: 9, icon: Trophy },
-      { id: "screenshots", name: "Screenshots", blurb: "Visual fragments.", count: 1284, icon: ImageIcon },
-      { id: "clips", name: "Clips", blurb: "Short moments captured.", count: 67, icon: Clapperboard },
-      { id: "moments", name: "Personal Moments", blurb: "Small, marked, kept.", count: 152, icon: SparklesIcon },
-    ],
-    recent: [
-      { kind: "GAME", title: "Dark Souls III", meta: "Played · 78h · platinum" },
-      { kind: "FILM", title: "Solaris (1972)", meta: "Tarkovsky · watched 3x" },
-      { kind: "JOURNEY", title: "Kyoto — November", meta: "11 days · 248 photographs" },
-      { kind: "CLIP", title: "Aurora over Tromsø", meta: "recorded · 02:14" },
-      { kind: "ALBUM", title: "In Rainbows", meta: "Radiohead · 312 plays" },
-      { kind: "ACHIEVEMENT", title: "First Marathon", meta: "Berlin · 04:21:08" },
-    ],
-  },
-  {
-    id: "creation",
-    index: "03",
-    name: "Creation",
-    purpose: "Expression. Production. Output.",
-    tagline: "What you've made, written, designed, composed.",
-    toneLabel: "DEEP VIOLET · GENERATIVE ENERGY",
-    hue: "oklch(0.68 0.22 300)",
-    hue2: "oklch(0.55 0.24 295)",
-    domains: [
-      { id: "writing", name: "Writing", blurb: "Drafts and finished prose.", count: 73, icon: PenLine },
-      { id: "essays", name: "Essays", blurb: "Long-form arguments.", count: 19, icon: ScrollText },
-      { id: "code", name: "Code", blurb: "Repos and snippets.", count: 42, icon: Code2 },
-      { id: "projects", name: "Projects", blurb: "Work in motion.", count: 6, icon: FolderKanban },
-      { id: "ideas", name: "Ideas", blurb: "Seeds, half-formed.", count: 211, icon: Lightbulb },
-      { id: "experiments", name: "Experiments", blurb: "Things tried, things learned.", count: 21, icon: FlaskConical },
-      { id: "designs", name: "Designs", blurb: "Sketches, frames, systems.", count: 88, icon: Palette },
-      { id: "music", name: "Music", blurb: "Compositions and stems.", count: 12, icon: Music },
-    ],
-    recent: [
-      { kind: "PROJECT", title: "KOS — prototype v0.1", meta: "active · 38 commits" },
-      { kind: "ESSAY", title: "On Attention as Currency", meta: "draft · 2,140 words" },
-      { kind: "CODE", title: "graph-walker", meta: "Rust · open source" },
-      { kind: "DESIGN", title: "Ambient UI explorations", meta: "Figma · 24 frames" },
-      { kind: "MUSIC", title: "Untitled — A minor", meta: "sketch · 03:42" },
-      { kind: "IDEA", title: "Memory as terrain", meta: "captured 03:11 AM" },
-    ],
-  },
-  {
-    id: "memory",
-    index: "04",
-    name: "Memory",
-    purpose: "Continuity of identity over time.",
-    tagline: "Personal history — moments, people, the throughline.",
-    toneLabel: "DARK INDIGO · NOSTALGIC",
-    hue: "oklch(0.55 0.16 270)",
-    hue2: "oklch(0.4 0.14 275)",
-    domains: [
-      { id: "timeline", name: "Timeline Events", blurb: "Life, laid out in seasons.", count: 412, icon: Clock3 },
-      { id: "diary", name: "Diary Entries", blurb: "Days as written.", count: 1864, icon: NotebookPen },
-      { id: "people", name: "People", blurb: "Who walked with you.", count: 184, icon: Users },
-      { id: "family", name: "Family", blurb: "The closest orbit.", count: 22, icon: Heart },
-      { id: "moments", name: "Important Moments", blurb: "Pinned forever.", count: 64, icon: Star },
-    ],
-    recent: [
-      { kind: "EVENT", title: "Moved to Lisbon", meta: "Nov 14, 2024" },
-      { kind: "PERSON", title: "Letters with M.", meta: "12 entries · 6 years" },
-      { kind: "MOMENT", title: "Grandfather's last summer", meta: "marked · 1998" },
-      { kind: "DIARY", title: "On a quiet Sunday", meta: "1,204 words · today" },
-      { kind: "FAMILY", title: "Sister's wedding", meta: "Porto · June" },
-      { kind: "EVENT", title: "First job · Day 1", meta: "Sep 02, 2014" },
-    ],
-  },
-  {
-    id: "discovery",
-    index: "05",
-    name: "Discovery",
-    purpose: "A knowledge connection engine.",
-    tagline: "Patterns the system has noticed across your life.",
-    toneLabel: "LUMINOUS PURPLE · CONNECTION",
-    hue: "oklch(0.78 0.18 310)",
-    hue2: "oklch(0.7 0.2 290)",
-    domains: [
-      { id: "connections", name: "Connections", blurb: "Entities the system has bridged.", count: 312, icon: Link2 },
-      { id: "patterns", name: "Patterns", blurb: "Recurring shapes in your thought.", count: 47, icon: Network },
-      { id: "insights", name: "Cross-Domain Insights", blurb: "Ideas that crossed worlds.", count: 28, icon: Telescope },
-      { id: "suggestions", name: "Relationship Suggestions", blurb: "Bridges waiting to be made.", count: 14, icon: GitBranch },
-    ],
-    recent: [
-      { kind: "CONNECTION", title: "Outer Wilds ↔ The Order of Time", meta: "shared concept: loops" },
-      { kind: "PATTERN", title: "“Slow promise” recurs in 4 essays", meta: "writing · 2024–2026" },
-      { kind: "INSIGHT", title: "Stigmergy ↔ Pattern Language", meta: "ants → architecture" },
-      { kind: "SUGGESTION", title: "Bridge: Rovelli ↔ Brand", meta: "time as material" },
-      { kind: "PATTERN", title: "Three reads share one idea", meta: "time, granularity" },
-      { kind: "CONNECTION", title: "Kyoto trip ↔ essay on attention", meta: "stillness" },
-    ],
-  },
-  {
-    id: "legacy",
-    index: "06",
-    name: "Legacy",
-    purpose: "What remains and is passed forward.",
-    tagline: "Curated wisdom — principles, teachings, things worth keeping.",
-    toneLabel: "DEEP STABLE PURPLE-BLACK · ENDURING",
-    hue: "oklch(0.5 0.12 295)",
-    hue2: "oklch(0.35 0.1 290)",
-    domains: [
-      { id: "principles", name: "Principles", blurb: "Rules you live by.", count: 24, icon: Compass },
-      { id: "teachings", name: "Teachings", blurb: "Lessons offered to others.", count: 18, icon: BookMarked },
-      { id: "lessons", name: "Life Lessons", blurb: "Hard-won understandings.", count: 41, icon: Feather },
-      { id: "shared", name: "Shared Knowledge", blurb: "Distilled and public.", count: 9, icon: Network },
-      { id: "wisdom", name: "Curated Wisdom", blurb: "What you'd hand to a stranger.", count: 33, icon: Star },
-    ],
-    recent: [
-      { kind: "PRINCIPLE", title: "Build for the long now.", meta: "since 2019" },
-      { kind: "LESSON", title: "Patience compounds.", meta: "noted · re-noted" },
-      { kind: "TEACHING", title: "On reading slowly", meta: "shared · 412 reads" },
-      { kind: "WISDOM", title: "Solitude is a workshop.", meta: "kept" },
-      { kind: "SHARED", title: "A letter to my future self", meta: "open · 2034" },
-      { kind: "PRINCIPLE", title: "Make less, deeper.", meta: "central" },
-    ],
-  },
-];
 
 /* ---------- layout consts ---------- */
 
@@ -266,7 +115,7 @@ const STRIDE = TILE_W + TILE_GAP;
 /* ---------- root ---------- */
 
 function Home() {
-  const [focusIdx, setFocusIdx] = useState(2); // Creation, like the reference
+  const [focusIdx, setFocusIdx] = useState(INITIAL_PILLAR_INDEX);
   const [environment, setEnvironment] = useState<PillarId | null>(null);
   const focused = PILLARS[focusIdx];
 
@@ -292,9 +141,7 @@ function Home() {
   }, [focusIdx, environment]);
 
   const offset = useMemo(() => -focusIdx * STRIDE, [focusIdx]);
-  const activePillar = environment
-    ? PILLARS.find((p) => p.id === environment)!
-    : focused;
+  const activePillar = environment ? PILLARS.find((p) => p.id === environment)! : focused;
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
@@ -368,8 +215,7 @@ function GalaxyBackdrop({ pillar }: { pillar: Pillar }) {
         <div
           className="absolute inset-0 opacity-[0.5]"
           style={{
-            backgroundImage:
-              "radial-gradient(oklch(1 0 0 / 0.03) 1px, transparent 1px)",
+            backgroundImage: "radial-gradient(oklch(1 0 0 / 0.03) 1px, transparent 1px)",
             backgroundSize: "3px 3px",
           }}
         />
@@ -444,6 +290,12 @@ function TopBar({ pillar }: { pillar: Pillar }) {
       </div>
       <div className="flex items-center gap-6 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
         <span className="hidden md:inline">{pillar.toneLabel}</span>
+        <Link
+          to="/study"
+          className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-foreground/90 transition-colors hover:bg-foreground/[0.08] focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          Study Core
+        </Link>
         <span>{time}</span>
       </div>
     </header>
@@ -585,7 +437,9 @@ function PillarTile({
         <div
           aria-hidden
           className="absolute inset-x-0 top-0 h-px"
-          style={{ background: "linear-gradient(90deg, transparent, oklch(1 0 0 / 0.18), transparent)" }}
+          style={{
+            background: "linear-gradient(90deg, transparent, oklch(1 0 0 / 0.18), transparent)",
+          }}
         />
 
         <div className="relative flex h-full flex-col justify-between p-7">
@@ -646,15 +500,7 @@ function PillarTile({
 
 /* ---------- context strip (below row) ---------- */
 
-function ContextStrip({
-  pillar,
-  index,
-  total,
-}: {
-  pillar: Pillar;
-  index: number;
-  total: number;
-}) {
+function ContextStrip({ pillar, index, total }: { pillar: Pillar; index: number; total: number }) {
   const recent = pillar.recent;
   return (
     <section
@@ -701,8 +547,7 @@ function ContextStrip({
                 style={{
                   background:
                     "linear-gradient(180deg, color-mix(in oklab, var(--surface-elevated) 70%, transparent), color-mix(in oklab, var(--surface) 60%, transparent))",
-                  boxShadow:
-                    "inset 0 1px 0 oklch(1 0 0 / 0.04), 0 0 0 1px oklch(1 0 0 / 0.05)",
+                  boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.04), 0 0 0 1px oklch(1 0 0 / 0.05)",
                 }}
               >
                 <span
@@ -733,13 +578,7 @@ function ContextStrip({
 
 /* ---------- environment (deep pillar view) ---------- */
 
-function Environment({
-  pillar,
-  onClose,
-}: {
-  pillar: Pillar;
-  onClose: () => void;
-}) {
+function Environment({ pillar, onClose }: { pillar: Pillar; onClose: () => void }) {
   return (
     <motion.section
       key={pillar.id + "-env"}
@@ -791,7 +630,9 @@ function Environment({
           <p className="mt-4 max-w-xl text-base text-muted-foreground">{pillar.tagline}</p>
         </div>
         <div className="text-right">
-          <div className="text-[10px] uppercase tracking-[0.32em] text-muted-foreground">Domains</div>
+          <div className="text-[10px] uppercase tracking-[0.32em] text-muted-foreground">
+            Domains
+          </div>
           <div className="serif mt-2 text-6xl leading-none">{pillar.domains.length}</div>
           <div className="mt-3 text-[11px] text-muted-foreground">
             {pillar.domains.reduce((a, d) => a + d.count, 0).toLocaleString()} entities
@@ -831,8 +672,7 @@ function Environment({
             style={{
               background:
                 "linear-gradient(180deg, color-mix(in oklab, var(--surface-elevated) 70%, transparent), color-mix(in oklab, var(--surface) 55%, transparent))",
-              boxShadow:
-                "inset 0 1px 0 oklch(1 0 0 / 0.04), 0 0 0 1px oklch(1 0 0 / 0.05)",
+              boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.04), 0 0 0 1px oklch(1 0 0 / 0.05)",
             }}
           >
             <span
@@ -861,10 +701,10 @@ function DomainCard({
   index,
 }: {
   pillar: Pillar;
-  domain: Domain;
+  domain: KosDomain;
   index: number;
 }) {
-  const Icon = domain.icon;
+  const Icon = KOS_ICONS[domain.icon];
   return (
     <motion.button
       type="button"

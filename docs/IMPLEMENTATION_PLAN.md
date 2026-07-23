@@ -2,6 +2,28 @@
 
 Este plano transforma a Fase 1 em passos pequenos e executaveis.
 
+## Marco 0: Fundacao do KOS
+
+Objetivo:
+
+Criar a base conceitual e tecnica minima para o projeto deixar de ser apenas
+uma tela mockada.
+
+Tarefas:
+
+- Registrar a visao, produto, arquitetura, modelo de dados e roadmap em
+  documentos.
+- Criar tipos de dominio para notas, livros, fichamentos, conceitos, sessoes de
+  estudo e perguntas.
+- Separar os pilares do KOS da camada visual.
+- Criar dados-semente para o Study Core.
+- Garantir que a home continue funcionando depois da separacao.
+
+Resultado esperado:
+
+O projeto passa a ter uma fundacao legivel para evoluir por anos, e o front
+continua estavel.
+
 ## Marco 1: Reorganizar o front atual
 
 Objetivo:
@@ -19,6 +41,12 @@ Tarefas:
 Resultado esperado:
 
 O front continua parecido, mas deixa de ser um unico arquivo grande.
+
+Status inicial:
+
+- Rota `/study` criada como primeiro Study Core.
+- Persistencia local criada para notas, livros, conceitos e perguntas.
+- Home ganhou atalho para o Study Core.
 
 ## Marco 2: Notas persistidas
 
@@ -130,4 +158,3 @@ Primeira versao:
 O KOS deve continuar bonito, mas cada marco deve adicionar uma capacidade real.
 Se a interface ficar linda e nao salvar nada, a Fase 1 ainda nao cumpriu sua
 missao.
-
