@@ -9,10 +9,14 @@ import {
   Plus,
   Search,
   Sparkles,
+  X,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   generateQuestionFromBook,
   generateQuestionFromNote,
@@ -27,9 +31,6 @@ import {
   type Note,
 } from "@/kos";
 import { useKosLocalState } from "@/kos/use-kos-local-state";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/study")({
   head: () => ({
@@ -37,12 +38,18 @@ export const Route = createFileRoute("/study")({
       { title: "Study Core · KOS" },
       {
         name: "description",
-        content: "The first study workspace for notes, books, concepts, and generated questions.",
+        content: "A PS5-inspired study chamber for notes, books, concepts, and active recall.",
       },
     ],
   }),
   component: StudyCore,
 });
+
+type StudyMode = "chamber" | "library" | "forge";
+type ComposerMode = "note" | "book" | null;
+type FocusItem =
+  | { type: "note"; id: string; title: string; subtitle: string; body: string; meta: string }
+  | { type: "book"; id: string; title: string; subtitle: string; body: string; meta: string };
 
 const BOOK_STATUS_LABELS: Record<BookStatus, string> = {
   to_read: "Para ler",
@@ -52,6 +59,40 @@ const BOOK_STATUS_LABELS: Record<BookStatus, string> = {
   abandoned: "Abandonado",
   reference: "Referencia",
 };
+
+const MODES: Array<{
+  id: StudyMode;
+  label: string;
+  title: string;
+  subtitle: string;
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
+  ambient: string;
+}> = [
+  {
+    id: "chamber",
+    label: "Study Chamber",
+    title: "Camara de estudo",
+    subtitle: "Notas, leitura e foco imediato.",
+    icon: NotebookPen,
+    ambient: "oklch(0.72 0.15 250)",
+  },
+  {
+    id: "library",
+    label: "Library Orbit",
+    title: "Orbita da biblioteca",
+    subtitle: "Livros, acervo e materiais em circulacao.",
+    icon: LibraryBig,
+    ambient: "oklch(0.78 0.12 110)",
+  },
+  {
+    id: "forge",
+    label: "Question Forge",
+    title: "Forja de perguntas",
+    subtitle: "Transforme conteudo salvo em recordacao ativa.",
+    icon: CircleHelp,
+    ambient: "oklch(0.72 0.2 320)",
+  },
+];
 
 function makeId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -65,33 +106,114 @@ function StudyCore() {
     "kos.study.questions",
     seedGeneratedQuestions,
   );
+  const [mode, setMode] = useState<StudyMode>("chamber");
+  const [composer, setComposer] = useState<ComposerMode>(null);
   const [search, setSearch] = useState("");
   const [noteDraft, setNoteDraft] = useState({ title: "", content: "" });
   const [bookDraft, setBookDraft] = useState({ title: "", authors: "", categories: "" });
   const [activeSource, setActiveSource] = useState(seedNotes[0]?.id ?? "");
 
+  const currentMode = MODES.find((item) => item.id === mode) ?? MODES[0];
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredNotes = useMemo(
-    () =>
-      notes.filter((note) =>
-        `${note.title} ${note.content} ${note.tags.join(" ")}`
-          .toLowerCase()
-          .includes(normalizedSearch),
-      ),
-    [notes, normalizedSearch],
-  );
-  const filteredBooks = useMemo(
-    () =>
-      books.filter((book) =>
-        `${book.title} ${book.authors.join(" ")} ${book.categories.join(" ")}`
-          .toLowerCase()
-          .includes(normalizedSearch),
-      ),
-    [books, normalizedSearch],
-  );
 
-  const readingBooks = books.filter((book) => book.status === "reading");
+  const focusItems = useMemo(() => {
+    const noteItems: FocusItem[] = notes.map((note) => ({
+      type: "note",
+      id: note.id,
+      title: note.title,
+      subtitle: note.source ?? "Study Core",
+      body: note.content,
+      meta: `${note.tags.length} tags · ${note.linkedConceptIds.length} conceitos`,
+    }));
+    const bookItems: FocusItem[] = books.map((book) => ({
+      type: "book",
+      id: book.id,
+      title: book.title,
+      subtitle: book.authors.join(", ") || "Autor nao informado",
+      body: book.notes ?? `Status: ${BOOK_STATUS_LABELS[book.status]}`,
+      meta: `${BOOK_STATUS_LABELS[book.status]} · ${book.categories.join(", ") || "sem categoria"}`,
+    }));
+
+    const sourceItems =
+      mode === "chamber"
+        ? [...noteItems, ...bookItems]
+        : mode === "library"
+          ? bookItems
+          : [...noteItems, ...bookItems];
+
+    if (!normalizedSearch) return sourceItems;
+    return sourceItems.filter((item) =>
+      `${item.title} ${item.subtitle} ${item.body} ${item.meta}`
+        .toLowerCase()
+        .includes(normalizedSearch),
+    );
+  }, [books, mode, normalizedSearch, notes]);
+
+  const activeItem = focusItems.find((item) => item.id === activeSource) ?? focusItems[0];
+  const activeIndex = activeItem ? focusItems.findIndex((item) => item.id === activeItem.id) : -1;
   const latestQuestion = questions[0];
+  const readingBooks = books.filter((book) => book.status === "reading");
+
+  useEffect(() => {
+    if (focusItems.length > 0 && !focusItems.some((item) => item.id === activeSource)) {
+      setActiveSource(focusItems[0].id);
+    }
+  }, [activeSource, focusItems]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const isTyping =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable;
+
+      if (isTyping) return;
+
+      if (event.key === "Escape" && composer) {
+        event.preventDefault();
+        setComposer(null);
+        return;
+      }
+
+      if (composer) return;
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        moveFocus(1);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        moveFocus(-1);
+      } else if (event.key === "1") {
+        setMode("chamber");
+      } else if (event.key === "2") {
+        setMode("library");
+      } else if (event.key === "3") {
+        setMode("forge");
+      } else if (event.key.toLowerCase() === "n") {
+        setComposer("note");
+      } else if (event.key.toLowerCase() === "b") {
+        setComposer("book");
+      } else if (event.key.toLowerCase() === "q") {
+        generateQuestion();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
+  function selectItem(item: FocusItem) {
+    setActiveSource(item.id);
+  }
+
+  function moveFocus(direction: -1 | 1) {
+    if (focusItems.length === 0) return;
+    const currentIndex = activeIndex >= 0 ? activeIndex : 0;
+    const nextIndex = Math.min(focusItems.length - 1, Math.max(0, currentIndex + direction));
+    setActiveSource(focusItems[nextIndex].id);
+  }
 
   function createNote() {
     const title = noteDraft.title.trim();
@@ -108,12 +230,14 @@ function StudyCore() {
       tags: ["study-core"],
       linkedBookIds: [],
       linkedConceptIds: [],
-      source: "Study Core",
+      source: "Study Chamber",
     };
 
     setNotes([note, ...notes]);
     setActiveSource(note.id);
     setNoteDraft({ title: "", content: "" });
+    setComposer(null);
+    setMode("chamber");
   }
 
   function createBook() {
@@ -134,11 +258,14 @@ function StudyCore() {
         .filter(Boolean),
       format: "unknown",
       owned: true,
+      notes: "Entrada criada manualmente no Study Core.",
     };
 
     setBooks([book, ...books]);
     setActiveSource(book.id);
     setBookDraft({ title: "", authors: "", categories: "" });
+    setComposer(null);
+    setMode("library");
   }
 
   function generateQuestion() {
@@ -150,319 +277,533 @@ function StudyCore() {
     if (!question) return;
 
     setQuestions([question, ...questions]);
+    setMode("forge");
   }
 
   return (
     <main className="min-h-dvh overflow-hidden bg-background text-foreground">
-      <div className="pointer-events-none fixed inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(70%_55%_at_18%_8%,oklch(0.72_0.16_250_/_0.22),transparent_72%),radial-gradient(50%_50%_at_80%_20%,oklch(0.78_0.13_95_/_0.12),transparent_68%),linear-gradient(180deg,oklch(0.13_0.014_270),oklch(0.08_0.014_270))]" />
-        <div className="absolute inset-0 opacity-35 [background-image:radial-gradient(oklch(1_0_0_/_0.055)_1px,transparent_1px)] [background-size:4px_4px]" />
-      </div>
+      <AmbientScene color={currentMode.ambient} mode={mode} />
 
-      <div className="relative mx-auto flex w-full max-w-[1600px] flex-col gap-8 px-5 py-6 md:px-10 lg:px-12">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-[1720px] flex-col px-5 py-5 md:px-9 lg:px-12">
         <header className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <Button
               asChild
               variant="ghost"
               size="icon"
-              className="h-11 w-11 rounded-full border border-foreground/10 bg-foreground/[0.04]"
+              className="h-12 w-12 rounded-full border border-foreground/10 bg-foreground/[0.05] backdrop-blur-xl"
             >
               <Link to="/" aria-label="Voltar para o portal KOS">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
             <div>
-              <div className="text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
+              <div className="text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
                 KOS · Study Core
               </div>
-              <h1 className="serif mt-1 text-4xl leading-none md:text-6xl">Estudo vivo</h1>
+              <h1 className="serif mt-1 text-4xl leading-none md:text-6xl">{currentMode.title}</h1>
             </div>
           </div>
 
-          <div className="relative w-full md:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative w-full md:max-w-lg">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar notas, livros, conceitos..."
+              placeholder="Buscar no seu nucleo de estudo..."
               aria-label="Buscar no Study Core"
-              className="h-11 rounded-full border-foreground/10 bg-foreground/[0.04] pl-10"
+              className="h-12 rounded-full border-foreground/10 bg-background/45 pl-11 text-base backdrop-blur-xl"
             />
           </div>
         </header>
 
-        <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="min-h-[320px] overflow-hidden rounded-[28px] border border-foreground/10 bg-foreground/[0.045] p-6 shadow-[0_40px_120px_-70px_oklch(0_0_0)] backdrop-blur-xl md:p-8">
-            <div className="flex flex-col justify-between gap-6 md:flex-row">
-              <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  Primeiro nucleo funcional
-                </div>
-                <h2 className="serif mt-6 text-5xl leading-[0.92] md:text-7xl">
-                  Guardar para lembrar.
-                </h2>
-                <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">
-                  Comece simples: escreva uma nota, registre um livro e gere perguntas a partir do
-                  que voce acabou de colocar no KOS.
-                </p>
-              </div>
+        <nav className="mt-7 flex gap-3 overflow-x-auto pb-2" aria-label="Modos do Study Core">
+          {MODES.map((item) => {
+            const Icon = item.icon;
+            const selected = item.id === mode;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setMode(item.id)}
+                className={`flex min-h-12 shrink-0 items-center gap-3 rounded-full border px-4 text-sm transition-all focus:outline-none focus:ring-1 focus:ring-ring ${
+                  selected
+                    ? "border-primary/45 bg-primary/15 text-foreground shadow-[0_0_36px_-18px_var(--glow)]"
+                    : "border-foreground/10 bg-foreground/[0.04] text-muted-foreground hover:bg-foreground/[0.08]"
+                }`}
+              >
+                <Icon className="h-4 w-4" strokeWidth={1.6} />
+                <span className="text-[11px] text-muted-foreground">{MODES.indexOf(item) + 1}</span>
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
 
-              <div className="grid grid-cols-3 gap-3 md:w-[330px]">
-                <Metric icon={NotebookPen} label="Notas" value={notes.length} />
-                <Metric icon={LibraryBig} label="Livros" value={books.length} />
-                <Metric icon={Brain} label="Conceitos" value={concepts.length} />
-              </div>
-            </div>
-
-            <div className="mt-8 grid gap-3 md:grid-cols-3">
-              <StudySignal
-                title="Foco atual"
-                value={readingBooks[0]?.title ?? "Sem livro em leitura"}
-              />
-              <StudySignal
-                title="Ultima pergunta"
-                value={latestQuestion?.question ?? "Gere a primeira pergunta"}
-              />
-              <StudySignal
-                title="Proximo passo"
-                value="Persistir fichamentos e sessoes de estudo"
-              />
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-foreground/10 bg-foreground/[0.04] p-5 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-4">
+        <section className="mt-7 grid flex-1 gap-5 lg:grid-cols-[minmax(0,1fr)_390px]">
+          <div className="min-w-0">
+            <div className="mb-4 flex items-end justify-between gap-4">
               <div>
-                <h2 className="text-lg font-medium">Perguntas rapidas</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Geradas a partir do material salvo.
-                </p>
+                <p className="text-sm leading-6 text-muted-foreground">{currentMode.subtitle}</p>
+                <div className="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                  <span>{notes.length} notas</span>
+                  <span>{books.length} livros</span>
+                  <span>{concepts.length} conceitos</span>
+                  <span>{questions.length} perguntas</span>
+                </div>
               </div>
-              <Button onClick={generateQuestion} className="h-11 rounded-full">
-                <CircleHelp className="h-4 w-4" />
-                Gerar
-              </Button>
-            </div>
-
-            <label className="mt-5 block text-sm text-muted-foreground" htmlFor="question-source">
-              Fonte da pergunta
-            </label>
-            <select
-              id="question-source"
-              value={activeSource}
-              onChange={(event) => setActiveSource(event.target.value)}
-              className="mt-2 h-11 w-full rounded-full border border-foreground/10 bg-background/70 px-4 text-sm outline-none ring-offset-background focus:ring-1 focus:ring-ring"
-            >
-              {notes.map((note) => (
-                <option key={note.id} value={note.id}>
-                  Nota · {note.title}
-                </option>
-              ))}
-              {books.map((book) => (
-                <option key={book.id} value={book.id}>
-                  Livro · {book.title}
-                </option>
-              ))}
-            </select>
-
-            <div className="mt-5 space-y-3">
-              {questions.slice(0, 4).map((question) => (
-                <article
-                  key={question.id}
-                  className="rounded-2xl border border-foreground/10 bg-background/45 p-4"
+              <div className="hidden gap-2 md:flex">
+                <Button onClick={() => setComposer("note")} className="h-11 rounded-full">
+                  <NotebookPen className="h-4 w-4" />
+                  Nova nota
+                </Button>
+                <Button
+                  onClick={() => setComposer("book")}
+                  variant="outline"
+                  className="h-11 rounded-full border-foreground/10 bg-foreground/[0.04]"
                 >
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-                    {question.questionType.replace("_", " ")}
-                  </div>
-                  <p className="mt-2 text-sm leading-6">{question.question}</p>
-                </article>
-              ))}
+                  <BookOpen className="h-4 w-4" />
+                  Livro
+                </Button>
+              </div>
             </div>
+
+            <FocusRail
+              items={focusItems}
+              activeId={activeItem?.id}
+              mode={mode}
+              activeIndex={activeIndex}
+              onSelect={selectItem}
+            />
+
+            <section className="mt-5 grid gap-4 md:grid-cols-3">
+              <Signal
+                icon={BookOpen}
+                title="Em leitura"
+                value={readingBooks[0]?.title ?? "Nenhum livro ativo"}
+              />
+              <Signal
+                icon={CircleHelp}
+                title="Ultima pergunta"
+                value={latestQuestion?.question ?? "Gere uma pergunta do item focado"}
+              />
+              <Signal
+                icon={Brain}
+                title="Conceitos"
+                value={concepts
+                  .slice(0, 3)
+                  .map((concept) => concept.name)
+                  .join(" · ")}
+              />
+            </section>
           </div>
+
+          <ContextPanel
+            item={activeItem}
+            activeIndex={activeIndex}
+            totalItems={focusItems.length}
+            mode={mode}
+            questions={questions}
+            onCreateNote={() => setComposer("note")}
+            onCreateBook={() => setComposer("book")}
+            onGenerateQuestion={generateQuestion}
+          />
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-2">
-          <Composer
-            title="Nova nota"
-            icon={NotebookPen}
-            primaryLabel="Salvar nota"
-            onSubmit={createNote}
-            disabled={!noteDraft.title.trim() || !noteDraft.content.trim()}
+        <div className="mt-4 flex gap-2 md:hidden">
+          <Button onClick={() => setComposer("note")} className="h-11 flex-1 rounded-full">
+            <NotebookPen className="h-4 w-4" />
+            Nova nota
+          </Button>
+          <Button
+            onClick={() => setComposer("book")}
+            variant="outline"
+            className="h-11 flex-1 rounded-full border-foreground/10 bg-foreground/[0.04]"
           >
-            <Input
-              value={noteDraft.title}
-              onChange={(event) => setNoteDraft({ ...noteDraft, title: event.target.value })}
-              placeholder="Titulo da nota"
-              aria-label="Titulo da nota"
-              className="h-11 bg-background/50"
-            />
-            <Textarea
-              value={noteDraft.content}
-              onChange={(event) => setNoteDraft({ ...noteDraft, content: event.target.value })}
-              placeholder="Escreva o que voce quer lembrar, revisar ou conectar..."
-              aria-label="Conteudo da nota"
-              className="min-h-36 bg-background/50 text-base leading-7"
-            />
-          </Composer>
-
-          <Composer
-            title="Adicionar livro"
-            icon={BookOpen}
-            primaryLabel="Adicionar"
-            onSubmit={createBook}
-            disabled={!bookDraft.title.trim()}
-          >
-            <Input
-              value={bookDraft.title}
-              onChange={(event) => setBookDraft({ ...bookDraft, title: event.target.value })}
-              placeholder="Titulo do livro"
-              aria-label="Titulo do livro"
-              className="h-11 bg-background/50"
-            />
-            <Input
-              value={bookDraft.authors}
-              onChange={(event) => setBookDraft({ ...bookDraft, authors: event.target.value })}
-              placeholder="Autores separados por virgula"
-              aria-label="Autores do livro"
-              className="h-11 bg-background/50"
-            />
-            <Input
-              value={bookDraft.categories}
-              onChange={(event) => setBookDraft({ ...bookDraft, categories: event.target.value })}
-              placeholder="Categorias separadas por virgula"
-              aria-label="Categorias do livro"
-              className="h-11 bg-background/50"
-            />
-          </Composer>
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
-          <LibraryPanel title="Notas recentes" icon={NotebookPen}>
-            {filteredNotes.map((note) => (
-              <button
-                key={note.id}
-                type="button"
-                onClick={() => setActiveSource(note.id)}
-                className="w-full rounded-2xl border border-foreground/10 bg-foreground/[0.035] p-4 text-left transition-colors hover:bg-foreground/[0.07] focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-base font-medium">{note.title}</h3>
-                  <span className="text-[11px] text-muted-foreground">{note.tags[0]}</span>
-                </div>
-                <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
-                  {note.content}
-                </p>
-              </button>
-            ))}
-          </LibraryPanel>
-
-          <LibraryPanel title="Livros do nucleo" icon={LibraryBig}>
-            {filteredBooks.map((book) => (
-              <button
-                key={book.id}
-                type="button"
-                onClick={() => setActiveSource(book.id)}
-                className="w-full rounded-2xl border border-foreground/10 bg-foreground/[0.035] p-4 text-left transition-colors hover:bg-foreground/[0.07] focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-base font-medium">{book.title}</h3>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
-                    {BOOK_STATUS_LABELS[book.status]}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {book.authors.join(", ") || "Autor nao informado"}
-                </p>
-              </button>
-            ))}
-          </LibraryPanel>
-        </section>
+            <BookOpen className="h-4 w-4" />
+            Livro
+          </Button>
+        </div>
       </div>
+
+      {composer && (
+        <ComposerPanel
+          mode={composer}
+          noteDraft={noteDraft}
+          bookDraft={bookDraft}
+          onClose={() => setComposer(null)}
+          onNoteDraft={setNoteDraft}
+          onBookDraft={setBookDraft}
+          onCreateNote={createNote}
+          onCreateBook={createBook}
+        />
+      )}
     </main>
   );
 }
 
-function Metric({
+function AmbientScene({ color, mode }: { color: string; mode: StudyMode }) {
+  return (
+    <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      <div
+        className="absolute inset-0 transition-colors duration-500"
+        style={{
+          background: `
+            radial-gradient(70% 62% at 18% 12%, color-mix(in oklab, ${color} 28%, transparent), transparent 70%),
+            radial-gradient(46% 50% at 84% 22%, color-mix(in oklab, ${color} 14%, transparent), transparent 72%),
+            linear-gradient(180deg, oklch(0.15 0.014 270), oklch(0.08 0.012 270) 76%)
+          `,
+        }}
+      />
+      <div className="absolute inset-x-[-10%] bottom-[-16%] h-[42%] rotate-[-2deg] border-t border-foreground/10 bg-[linear-gradient(90deg,transparent,oklch(1_0_0_/_0.055),transparent)] blur-[1px]" />
+      <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(oklch(1_0_0_/_0.04)_1px,transparent_1px),radial-gradient(oklch(1_0_0_/_0.045)_1px,transparent_1px)] [background-size:100%_92px,4px_4px]" />
+      <div className="absolute left-1/2 top-[18%] h-[48rem] w-[48rem] -translate-x-1/2 rounded-full border border-foreground/[0.035]" />
+      <div className="absolute left-1/2 top-[22%] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full border border-foreground/[0.035]" />
+      <div className="absolute bottom-8 left-1/2 h-px w-[84%] -translate-x-1/2 bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
+      <div className="absolute bottom-10 left-1/2 flex w-[78%] -translate-x-1/2 justify-between opacity-35">
+        {Array.from({ length: mode === "library" ? 18 : 12 }).map((_, index) => (
+          <span
+            key={index}
+            className="h-16 w-px bg-gradient-to-b from-foreground/30 to-transparent"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FocusRail({
+  items,
+  activeId,
+  activeIndex,
+  mode,
+  onSelect,
+}: {
+  items: FocusItem[];
+  activeId?: string;
+  activeIndex: number;
+  mode: StudyMode;
+  onSelect: (item: FocusItem) => void;
+}) {
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    if (!activeId) return;
+    itemRefs.current[activeId]?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [activeId]);
+
+  if (items.length === 0) {
+    return (
+      <div className="flex min-h-[360px] items-center justify-center rounded-[28px] border border-foreground/10 bg-foreground/[0.04] text-muted-foreground backdrop-blur-xl">
+        Nada encontrado nesse modo.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto pb-8 pt-4">
+      <div className="flex min-h-[390px] gap-5 pr-6">
+        {items.map((item, index) => {
+          const active = item.id === activeId;
+          return (
+            <button
+              key={item.id}
+              ref={(node) => {
+                itemRefs.current[item.id] = node;
+              }}
+              type="button"
+              onClick={() => onSelect(item)}
+              className={`group relative flex h-[340px] w-[260px] shrink-0 flex-col justify-between overflow-hidden rounded-[30px] border p-6 text-left transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-ring md:h-[370px] md:w-[310px] ${
+                active
+                  ? "-translate-y-3 scale-[1.035] border-primary/45 bg-foreground/[0.09] shadow-[0_42px_120px_-55px_var(--glow)]"
+                  : "border-foreground/10 bg-foreground/[0.04] opacity-65 hover:-translate-y-1 hover:opacity-95"
+              }`}
+              style={{
+                transformOrigin: "center bottom",
+              }}
+            >
+              <div
+                aria-hidden
+                className="absolute inset-0"
+                style={{
+                  background: `radial-gradient(80% 55% at 30% 12%, color-mix(in oklab, ${
+                    mode === "library"
+                      ? "oklch(0.78 0.12 110)"
+                      : mode === "forge"
+                        ? "oklch(0.72 0.2 320)"
+                        : "oklch(0.72 0.15 250)"
+                  } ${active ? 34 : 16}%, transparent), transparent 70%)`,
+                }}
+              />
+              <div className="relative flex items-center justify-between">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-foreground/10 bg-background/35">
+                  {item.type === "note" ? (
+                    <NotebookPen className="h-5 w-5" strokeWidth={1.5} />
+                  ) : (
+                    <BookOpen className="h-5 w-5" strokeWidth={1.5} />
+                  )}
+                </div>
+                <span className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+              </div>
+              <div className="relative">
+                <div className="text-[11px] uppercase tracking-[0.26em] text-muted-foreground">
+                  {item.type === "note" ? "Nota" : "Livro"}
+                </div>
+                <h2 className="serif mt-3 text-4xl leading-[0.95]">{item.title}</h2>
+                <p className="mt-4 line-clamp-3 text-sm leading-6 text-muted-foreground">
+                  {item.body}
+                </p>
+              </div>
+              <div className="relative flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                <span className="line-clamp-1">{item.subtitle}</span>
+                <span
+                  className={`h-2 w-2 rounded-full ${active ? "bg-primary" : "bg-foreground/25"}`}
+                />
+              </div>
+              {active && (
+                <div className="absolute inset-x-6 bottom-3 h-[2px] overflow-hidden rounded-full bg-foreground/10">
+                  <div
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${((activeIndex + 1) / items.length) * 100}%` }}
+                  />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ContextPanel({
+  item,
+  activeIndex,
+  totalItems,
+  mode,
+  questions,
+  onCreateNote,
+  onCreateBook,
+  onGenerateQuestion,
+}: {
+  item?: FocusItem;
+  activeIndex: number;
+  totalItems: number;
+  mode: StudyMode;
+  questions: GeneratedQuestion[];
+  onCreateNote: () => void;
+  onCreateBook: () => void;
+  onGenerateQuestion: () => void;
+}) {
+  return (
+    <aside className="rounded-[30px] border border-foreground/10 bg-background/45 p-5 shadow-[0_36px_100px_-75px_oklch(0_0_0)] backdrop-blur-2xl">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.26em] text-muted-foreground">
+            Contexto
+          </div>
+          <h2 className="mt-1 text-xl font-medium">{item?.title ?? "Sem foco"}</h2>
+        </div>
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-foreground/10 bg-foreground/[0.05]">
+          <Sparkles className="h-5 w-5 text-primary" strokeWidth={1.5} />
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-1">
+          {item?.type === "book" ? "Livro" : "Nota"}
+        </span>
+        <span className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-1">
+          {Math.max(activeIndex + 1, 0)} / {totalItems}
+        </span>
+        {item?.meta && (
+          <span className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-1">
+            {item.meta}
+          </span>
+        )}
+      </div>
+
+      <p className="mt-5 min-h-20 text-sm leading-7 text-muted-foreground">
+        {item?.body ?? "Selecione uma nota ou livro no trilho para ver detalhes e gerar perguntas."}
+      </p>
+
+      <div className="mt-5 grid gap-2">
+        <Button onClick={onGenerateQuestion} className="h-12 rounded-full">
+          <CircleHelp className="h-4 w-4" />
+          Gerar pergunta
+        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            onClick={onCreateNote}
+            variant="outline"
+            className="h-11 rounded-full border-foreground/10 bg-foreground/[0.04]"
+          >
+            <NotebookPen className="h-4 w-4" />
+            Nota
+          </Button>
+          <Button
+            onClick={onCreateBook}
+            variant="outline"
+            className="h-11 rounded-full border-foreground/10 bg-foreground/[0.04]"
+          >
+            <BookOpen className="h-4 w-4" />
+            Livro
+          </Button>
+        </div>
+      </div>
+
+      <div className="mt-7">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-medium">Perguntas recentes</h3>
+          <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            {mode}
+          </span>
+        </div>
+        <div className="space-y-3">
+          {questions.slice(0, 4).map((question) => (
+            <article
+              key={question.id}
+              className="rounded-2xl border border-foreground/10 bg-foreground/[0.035] p-4"
+            >
+              <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                {question.questionType.replace("_", " ")}
+              </div>
+              <p className="mt-2 text-sm leading-6">{question.question}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function ComposerPanel({
+  mode,
+  noteDraft,
+  bookDraft,
+  onClose,
+  onNoteDraft,
+  onBookDraft,
+  onCreateNote,
+  onCreateBook,
+}: {
+  mode: Exclude<ComposerMode, null>;
+  noteDraft: { title: string; content: string };
+  bookDraft: { title: string; authors: string; categories: string };
+  onClose: () => void;
+  onNoteDraft: (draft: { title: string; content: string }) => void;
+  onBookDraft: (draft: { title: string; authors: string; categories: string }) => void;
+  onCreateNote: () => void;
+  onCreateBook: () => void;
+}) {
+  const isNote = mode === "note";
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-background/55 p-4 backdrop-blur-md md:items-center">
+      <section className="w-full max-w-3xl rounded-[30px] border border-foreground/10 bg-background/90 p-5 shadow-[0_40px_140px_-70px_oklch(0_0_0)] md:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.26em] text-muted-foreground">
+              {isNote ? "Study Chamber" : "Library Orbit"}
+            </div>
+            <h2 className="serif mt-1 text-4xl leading-none">
+              {isNote ? "Nova nota" : "Novo livro"}
+            </h2>
+          </div>
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11 rounded-full border border-foreground/10 bg-foreground/[0.04]"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {isNote ? (
+          <div className="mt-6 space-y-3">
+            <Input
+              value={noteDraft.title}
+              onChange={(event) => onNoteDraft({ ...noteDraft, title: event.target.value })}
+              placeholder="Titulo da nota"
+              aria-label="Titulo da nota"
+              className="h-12 bg-foreground/[0.04] text-base"
+            />
+            <Textarea
+              value={noteDraft.content}
+              onChange={(event) => onNoteDraft({ ...noteDraft, content: event.target.value })}
+              placeholder="Escreva o que voce quer lembrar, revisar ou conectar..."
+              aria-label="Conteudo da nota"
+              className="min-h-52 bg-foreground/[0.04] text-base leading-7"
+            />
+            <Button
+              onClick={onCreateNote}
+              disabled={!noteDraft.title.trim() || !noteDraft.content.trim()}
+              className="h-12 w-full rounded-full"
+            >
+              <Plus className="h-4 w-4" />
+              Salvar nota
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-6 space-y-3">
+            <Input
+              value={bookDraft.title}
+              onChange={(event) => onBookDraft({ ...bookDraft, title: event.target.value })}
+              placeholder="Titulo do livro"
+              aria-label="Titulo do livro"
+              className="h-12 bg-foreground/[0.04] text-base"
+            />
+            <Input
+              value={bookDraft.authors}
+              onChange={(event) => onBookDraft({ ...bookDraft, authors: event.target.value })}
+              placeholder="Autores separados por virgula"
+              aria-label="Autores do livro"
+              className="h-12 bg-foreground/[0.04] text-base"
+            />
+            <Input
+              value={bookDraft.categories}
+              onChange={(event) => onBookDraft({ ...bookDraft, categories: event.target.value })}
+              placeholder="Categorias separadas por virgula"
+              aria-label="Categorias do livro"
+              className="h-12 bg-foreground/[0.04] text-base"
+            />
+            <Button
+              onClick={onCreateBook}
+              disabled={!bookDraft.title.trim()}
+              className="h-12 w-full rounded-full"
+            >
+              <Plus className="h-4 w-4" />
+              Adicionar livro
+            </Button>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function Signal({
   icon: Icon,
-  label,
+  title,
   value,
 }: {
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4">
-      <Icon className="h-5 w-5 text-primary" strokeWidth={1.6} />
-      <div className="serif mt-6 text-4xl leading-none">{value}</div>
-      <div className="mt-1 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function StudySignal({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-foreground/10 bg-background/35 p-4">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{title}</div>
-      <p className="mt-2 line-clamp-2 text-sm leading-6">{value}</p>
-    </div>
-  );
-}
-
-function Composer({
-  title,
-  icon: Icon,
-  children,
-  primaryLabel,
-  disabled,
-  onSubmit,
-}: {
   title: string;
-  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
-  children: ReactNode;
-  primaryLabel: string;
-  disabled: boolean;
-  onSubmit: () => void;
+  value: string;
 }) {
   return (
-    <section className="rounded-[28px] border border-foreground/10 bg-foreground/[0.04] p-5 backdrop-blur-xl">
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Icon className="h-5 w-5" strokeWidth={1.6} />
-          </div>
-          <h2 className="text-lg font-medium">{title}</h2>
-        </div>
-        <Button onClick={onSubmit} disabled={disabled} className="h-11 rounded-full">
-          <Plus className="h-4 w-4" />
-          {primaryLabel}
-        </Button>
+    <article className="min-h-32 rounded-[24px] border border-foreground/10 bg-foreground/[0.04] p-5 backdrop-blur-xl">
+      <div className="flex items-center gap-3">
+        <Icon className="h-4 w-4 text-primary" strokeWidth={1.6} />
+        <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{title}</div>
       </div>
-      <div className="space-y-3">{children}</div>
-    </section>
-  );
-}
-
-function LibraryPanel({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-[28px] border border-foreground/10 bg-foreground/[0.04] p-5 backdrop-blur-xl">
-      <div className="mb-5 flex items-center gap-3">
-        <Icon className="h-5 w-5 text-primary" strokeWidth={1.6} />
-        <h2 className="text-lg font-medium">{title}</h2>
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+      <p className="mt-5 line-clamp-2 text-sm leading-6">{value}</p>
+    </article>
   );
 }

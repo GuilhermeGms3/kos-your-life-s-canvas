@@ -44,6 +44,7 @@ import {
 import {
   INITIAL_PILLAR_INDEX,
   PILLARS,
+  getPillarRoom,
   type KosDomain,
   type KosIconName,
   type Pillar,
@@ -579,6 +580,8 @@ function ContextStrip({ pillar, index, total }: { pillar: Pillar; index: number;
 /* ---------- environment (deep pillar view) ---------- */
 
 function Environment({ pillar, onClose }: { pillar: Pillar; onClose: () => void }) {
+  const room = getPillarRoom(pillar.id);
+
   return (
     <motion.section
       key={pillar.id + "-env"}
@@ -628,6 +631,26 @@ function Environment({ pillar, onClose }: { pillar: Pillar; onClose: () => void 
             {pillar.name}
           </motion.h1>
           <p className="mt-4 max-w-xl text-base text-muted-foreground">{pillar.tagline}</p>
+          {room && (
+            <div className="mt-7">
+              {pillar.id === "knowledge" ? (
+                <Link
+                  to="/study"
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-foreground/10 bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {room.routeLabel}
+                </Link>
+              ) : (
+                <Link
+                  to="/pillars/$pillarId"
+                  params={{ pillarId: pillar.id }}
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-foreground/10 bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {room.routeLabel}
+                </Link>
+              )}
+            </div>
+          )}
         </div>
         <div className="text-right">
           <div className="text-[10px] uppercase tracking-[0.32em] text-muted-foreground">

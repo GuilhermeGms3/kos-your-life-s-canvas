@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudyRouteImport } from './routes/study'
+import { Route as PillarsPillarIdRouteImport } from './routes/pillars.$pillarId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const StudyRoute = StudyRouteImport.update({
   path: '/study',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PillarsPillarIdRoute = PillarsPillarIdRouteImport.update({
+  id: '/pillars/$pillarId',
+  path: '/pillars/$pillarId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/study': typeof StudyRoute
+  '/pillars/$pillarId': typeof PillarsPillarIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/study': typeof StudyRoute
+  '/pillars/$pillarId': typeof PillarsPillarIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/study': typeof StudyRoute
+  '/pillars/$pillarId': typeof PillarsPillarIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/study'
+  fullPaths: '/' | '/study' | '/pillars/$pillarId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/study'
-  id: '__root__' | '/' | '/study'
+  to: '/' | '/study' | '/pillars/$pillarId'
+  id: '__root__' | '/' | '/study' | '/pillars/$pillarId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   StudyRoute: typeof StudyRoute
+  PillarsPillarIdRoute: typeof PillarsPillarIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pillars/$pillarId': {
+      id: '/pillars/$pillarId'
+      path: '/pillars/$pillarId'
+      fullPath: '/pillars/$pillarId'
+      preLoaderRoute: typeof PillarsPillarIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   StudyRoute: StudyRoute,
+  PillarsPillarIdRoute: PillarsPillarIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

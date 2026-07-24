@@ -1,4 +1,5 @@
 export { INITIAL_PILLAR_INDEX, PILLARS } from "./pillars";
+export { getPillarRoom, PILLAR_ROOMS, type PillarRoom } from "./pillar-rooms";
 export { generateQuestionFromBook, generateQuestionFromNote } from "./question-generator";
 export {
   seedBooks,

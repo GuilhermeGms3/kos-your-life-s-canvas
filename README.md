@@ -20,6 +20,7 @@ partir do proprio material do usuario.
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Modelo de dados](docs/DATA_MODEL.md)
 - [Sistema visual](docs/DESIGN_SYSTEM.md)
+- [Norte visual](docs/VISUAL_NORTH_STAR.md)
 - [Integracoes futuras](docs/INTEGRATIONS.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Plano de implementacao](docs/IMPLEMENTATION_PLAN.md)

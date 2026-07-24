@@ -47,6 +47,12 @@ Status inicial:
 - Rota `/study` criada como primeiro Study Core.
 - Persistencia local criada para notas, livros, conceitos e perguntas.
 - Home ganhou atalho para o Study Core.
+- Primeira direcao PS5-like aplicada com modos, trilho de foco, painel
+  contextual e criacao por painel.
+- Navegacao por foco adicionada com setas, atalhos discretos e trilho que segue
+  o card ativo.
+- Salas-semente criadas para iniciar Experience, Creation, Memory, Discovery e
+  Legacy sem tirar foco do Study Core.
 
 ## Marco 2: Notas persistidas
 
