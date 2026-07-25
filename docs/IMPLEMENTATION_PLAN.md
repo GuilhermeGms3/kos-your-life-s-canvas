@@ -60,6 +60,14 @@ Objetivo:
 
 Permitir que o usuario escreva e recupere notas.
 
+Status inicial:
+
+- Criacao de notas persistidas no navegador.
+- Edicao de titulo, conteudo e tags.
+- Metadados de criacao e atualizacao exibidos no painel contextual.
+- Selecao da nota editada preservada no trilho de foco.
+- Salvamento local via camada `useKosLocalState`.
+
 Primeira versao:
 
 - Lista de notas.

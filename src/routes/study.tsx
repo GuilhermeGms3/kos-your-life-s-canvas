@@ -3,12 +3,16 @@ import {
   ArrowLeft,
   BookOpen,
   Brain,
+  CalendarClock,
   CircleHelp,
+  Edit3,
   LibraryBig,
   NotebookPen,
   Plus,
+  Save,
   Search,
   Sparkles,
+  Tags,
   X,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
@@ -46,10 +50,26 @@ export const Route = createFileRoute("/study")({
 });
 
 type StudyMode = "chamber" | "library" | "forge";
-type ComposerMode = "note" | "book" | null;
+type ComposerMode = "note" | "book" | "edit-note" | null;
 type FocusItem =
-  | { type: "note"; id: string; title: string; subtitle: string; body: string; meta: string }
-  | { type: "book"; id: string; title: string; subtitle: string; body: string; meta: string };
+  | {
+      type: "note";
+      id: string;
+      title: string;
+      subtitle: string;
+      body: string;
+      meta: string;
+      details: string[];
+    }
+  | {
+      type: "book";
+      id: string;
+      title: string;
+      subtitle: string;
+      body: string;
+      meta: string;
+      details: string[];
+    };
 
 const BOOK_STATUS_LABELS: Record<BookStatus, string> = {
   to_read: "Para ler",
@@ -98,6 +118,23 @@ function makeId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function formatShortDate(value?: string) {
+  if (!value) return "sem data";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function parseCsv(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function StudyCore() {
   const [notes, setNotes] = useKosLocalState<Note[]>("kos.study.notes", seedNotes);
   const [books, setBooks] = useKosLocalState<Book[]>("kos.study.books", seedBooks);
@@ -109,7 +146,13 @@ function StudyCore() {
   const [mode, setMode] = useState<StudyMode>("chamber");
   const [composer, setComposer] = useState<ComposerMode>(null);
   const [search, setSearch] = useState("");
-  const [noteDraft, setNoteDraft] = useState({ title: "", content: "" });
+  const [noteDraft, setNoteDraft] = useState({ title: "", content: "", tags: "" });
+  const [editNoteDraft, setEditNoteDraft] = useState({
+    id: "",
+    title: "",
+    content: "",
+    tags: "",
+  });
   const [bookDraft, setBookDraft] = useState({ title: "", authors: "", categories: "" });
   const [activeSource, setActiveSource] = useState(seedNotes[0]?.id ?? "");
 
@@ -124,6 +167,11 @@ function StudyCore() {
       subtitle: note.source ?? "Study Core",
       body: note.content,
       meta: `${note.tags.length} tags · ${note.linkedConceptIds.length} conceitos`,
+      details: [
+        `Criada ${formatShortDate(note.createdAt)}`,
+        `Atualizada ${formatShortDate(note.updatedAt)}`,
+        note.tags.length ? `Tags: ${note.tags.join(", ")}` : "Sem tags",
+      ],
     }));
     const bookItems: FocusItem[] = books.map((book) => ({
       type: "book",
@@ -132,6 +180,11 @@ function StudyCore() {
       subtitle: book.authors.join(", ") || "Autor nao informado",
       body: book.notes ?? `Status: ${BOOK_STATUS_LABELS[book.status]}`,
       meta: `${BOOK_STATUS_LABELS[book.status]} · ${book.categories.join(", ") || "sem categoria"}`,
+      details: [
+        BOOK_STATUS_LABELS[book.status],
+        book.format.toUpperCase(),
+        book.categories.length ? `Categorias: ${book.categories.join(", ")}` : "Sem categoria",
+      ],
     }));
 
     const sourceItems =
@@ -153,6 +206,8 @@ function StudyCore() {
   const activeIndex = activeItem ? focusItems.findIndex((item) => item.id === activeItem.id) : -1;
   const latestQuestion = questions[0];
   const readingBooks = books.filter((book) => book.status === "reading");
+  const activeNote =
+    activeItem?.type === "note" ? notes.find((note) => note.id === activeItem.id) : undefined;
 
   useEffect(() => {
     if (focusItems.length > 0 && !focusItems.some((item) => item.id === activeSource)) {
@@ -195,6 +250,8 @@ function StudyCore() {
         setComposer("note");
       } else if (event.key.toLowerCase() === "b") {
         setComposer("book");
+      } else if (event.key.toLowerCase() === "e") {
+        if (activeNote) openEditNote(activeNote);
       } else if (event.key.toLowerCase() === "q") {
         generateQuestion();
       }
@@ -227,7 +284,7 @@ function StudyCore() {
       content,
       createdAt: now,
       updatedAt: now,
-      tags: ["study-core"],
+      tags: parseCsv(noteDraft.tags).length ? parseCsv(noteDraft.tags) : ["study-core"],
       linkedBookIds: [],
       linkedConceptIds: [],
       source: "Study Chamber",
@@ -235,7 +292,41 @@ function StudyCore() {
 
     setNotes([note, ...notes]);
     setActiveSource(note.id);
-    setNoteDraft({ title: "", content: "" });
+    setNoteDraft({ title: "", content: "", tags: "" });
+    setComposer(null);
+    setMode("chamber");
+  }
+
+  function openEditNote(note: Note) {
+    setEditNoteDraft({
+      id: note.id,
+      title: note.title,
+      content: note.content,
+      tags: note.tags.join(", "),
+    });
+    setComposer("edit-note");
+  }
+
+  function updateNote() {
+    const title = editNoteDraft.title.trim();
+    const content = editNoteDraft.content.trim();
+    if (!editNoteDraft.id || !title || !content) return;
+
+    const now = new Date().toISOString();
+    setNotes(
+      notes.map((note) =>
+        note.id === editNoteDraft.id
+          ? {
+              ...note,
+              title,
+              content,
+              tags: parseCsv(editNoteDraft.tags),
+              updatedAt: now,
+            }
+          : note,
+      ),
+    );
+    setActiveSource(editNoteDraft.id);
     setComposer(null);
     setMode("chamber");
   }
@@ -406,6 +497,7 @@ function StudyCore() {
             questions={questions}
             onCreateNote={() => setComposer("note")}
             onCreateBook={() => setComposer("book")}
+            onEditNote={activeNote ? () => openEditNote(activeNote) : undefined}
             onGenerateQuestion={generateQuestion}
           />
         </section>
@@ -430,11 +522,14 @@ function StudyCore() {
         <ComposerPanel
           mode={composer}
           noteDraft={noteDraft}
+          editNoteDraft={editNoteDraft}
           bookDraft={bookDraft}
           onClose={() => setComposer(null)}
           onNoteDraft={setNoteDraft}
+          onEditNoteDraft={setEditNoteDraft}
           onBookDraft={setBookDraft}
           onCreateNote={createNote}
+          onUpdateNote={updateNote}
           onCreateBook={createBook}
         />
       )}
@@ -590,6 +685,7 @@ function ContextPanel({
   questions,
   onCreateNote,
   onCreateBook,
+  onEditNote,
   onGenerateQuestion,
 }: {
   item?: FocusItem;
@@ -599,6 +695,7 @@ function ContextPanel({
   questions: GeneratedQuestion[];
   onCreateNote: () => void;
   onCreateBook: () => void;
+  onEditNote?: () => void;
   onGenerateQuestion: () => void;
 }) {
   return (
@@ -633,11 +730,35 @@ function ContextPanel({
         {item?.body ?? "Selecione uma nota ou livro no trilho para ver detalhes e gerar perguntas."}
       </p>
 
+      {item?.details && (
+        <div className="mt-4 grid gap-2">
+          {item.details.map((detail) => (
+            <div
+              key={detail}
+              className="flex min-h-10 items-center gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.03] px-3 text-xs text-muted-foreground"
+            >
+              <CalendarClock className="h-3.5 w-3.5 text-primary" strokeWidth={1.5} />
+              <span className="line-clamp-1">{detail}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="mt-5 grid gap-2">
         <Button onClick={onGenerateQuestion} className="h-12 rounded-full">
           <CircleHelp className="h-4 w-4" />
           Gerar pergunta
         </Button>
+        {onEditNote && (
+          <Button
+            onClick={onEditNote}
+            variant="outline"
+            className="h-11 rounded-full border-foreground/10 bg-foreground/[0.04]"
+          >
+            <Edit3 className="h-4 w-4" />
+            Editar nota
+          </Button>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <Button
             onClick={onCreateNote}
@@ -686,33 +807,43 @@ function ContextPanel({
 function ComposerPanel({
   mode,
   noteDraft,
+  editNoteDraft,
   bookDraft,
   onClose,
   onNoteDraft,
+  onEditNoteDraft,
   onBookDraft,
   onCreateNote,
+  onUpdateNote,
   onCreateBook,
 }: {
   mode: Exclude<ComposerMode, null>;
-  noteDraft: { title: string; content: string };
+  noteDraft: { title: string; content: string; tags: string };
+  editNoteDraft: { id: string; title: string; content: string; tags: string };
   bookDraft: { title: string; authors: string; categories: string };
   onClose: () => void;
-  onNoteDraft: (draft: { title: string; content: string }) => void;
+  onNoteDraft: (draft: { title: string; content: string; tags: string }) => void;
+  onEditNoteDraft: (draft: { id: string; title: string; content: string; tags: string }) => void;
   onBookDraft: (draft: { title: string; authors: string; categories: string }) => void;
   onCreateNote: () => void;
+  onUpdateNote: () => void;
   onCreateBook: () => void;
 }) {
   const isNote = mode === "note";
+  const isEditNote = mode === "edit-note";
+  const notePanelDraft = isEditNote ? editNoteDraft : noteDraft;
+  const notePanelUpdate = isEditNote ? onEditNoteDraft : onNoteDraft;
+
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-background/55 p-4 backdrop-blur-md md:items-center">
       <section className="w-full max-w-3xl rounded-[30px] border border-foreground/10 bg-background/90 p-5 shadow-[0_40px_140px_-70px_oklch(0_0_0)] md:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-[11px] uppercase tracking-[0.26em] text-muted-foreground">
-              {isNote ? "Study Chamber" : "Library Orbit"}
+              {isNote || isEditNote ? "Study Chamber" : "Library Orbit"}
             </div>
             <h2 className="serif mt-1 text-4xl leading-none">
-              {isNote ? "Nova nota" : "Novo livro"}
+              {isEditNote ? "Editar nota" : isNote ? "Nova nota" : "Novo livro"}
             </h2>
           </div>
           <Button
@@ -725,29 +856,45 @@ function ComposerPanel({
           </Button>
         </div>
 
-        {isNote ? (
+        {isNote || isEditNote ? (
           <div className="mt-6 space-y-3">
             <Input
-              value={noteDraft.title}
-              onChange={(event) => onNoteDraft({ ...noteDraft, title: event.target.value })}
+              value={notePanelDraft.title}
+              onChange={(event) =>
+                notePanelUpdate({ ...notePanelDraft, title: event.target.value })
+              }
               placeholder="Titulo da nota"
               aria-label="Titulo da nota"
               className="h-12 bg-foreground/[0.04] text-base"
             />
+            <div className="relative">
+              <Tags className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={notePanelDraft.tags}
+                onChange={(event) =>
+                  notePanelUpdate({ ...notePanelDraft, tags: event.target.value })
+                }
+                placeholder="Tags separadas por virgula"
+                aria-label="Tags da nota"
+                className="h-12 bg-foreground/[0.04] pl-10 text-base"
+              />
+            </div>
             <Textarea
-              value={noteDraft.content}
-              onChange={(event) => onNoteDraft({ ...noteDraft, content: event.target.value })}
+              value={notePanelDraft.content}
+              onChange={(event) =>
+                notePanelUpdate({ ...notePanelDraft, content: event.target.value })
+              }
               placeholder="Escreva o que voce quer lembrar, revisar ou conectar..."
               aria-label="Conteudo da nota"
               className="min-h-52 bg-foreground/[0.04] text-base leading-7"
             />
             <Button
-              onClick={onCreateNote}
-              disabled={!noteDraft.title.trim() || !noteDraft.content.trim()}
+              onClick={isEditNote ? onUpdateNote : onCreateNote}
+              disabled={!notePanelDraft.title.trim() || !notePanelDraft.content.trim()}
               className="h-12 w-full rounded-full"
             >
-              <Plus className="h-4 w-4" />
-              Salvar nota
+              {isEditNote ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {isEditNote ? "Salvar alteracoes" : "Salvar nota"}
             </Button>
           </div>
         ) : (
