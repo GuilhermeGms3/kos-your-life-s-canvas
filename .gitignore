@@ -16,6 +16,9 @@ dist-ssr
 .nitro
 *.local
 
+# Local integration data
+infra/calibre-web/data/
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

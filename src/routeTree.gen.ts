@@ -11,7 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudyRouteImport } from './routes/study'
+import { Route as VaultRouteImport } from './routes/vault'
+import { Route as LegacyAcademyRouteImport } from './routes/legacy.academy'
+import { Route as LibraryKindleRouteImport } from './routes/library.kindle'
 import { Route as PillarsPillarIdRouteImport } from './routes/pillars.$pillarId'
+import { Route as StudyMediaRouteImport } from './routes/study_.media'
+import { Route as ApiIntegrationsCalibreStatusRouteImport } from './routes/api.integrations.calibre.status'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,40 +28,111 @@ const StudyRoute = StudyRouteImport.update({
   path: '/study',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VaultRoute = VaultRouteImport.update({
+  id: '/vault',
+  path: '/vault',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegacyAcademyRoute = LegacyAcademyRouteImport.update({
+  id: '/legacy/academy',
+  path: '/legacy/academy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryKindleRoute = LibraryKindleRouteImport.update({
+  id: '/library/kindle',
+  path: '/library/kindle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PillarsPillarIdRoute = PillarsPillarIdRouteImport.update({
   id: '/pillars/$pillarId',
   path: '/pillars/$pillarId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudyMediaRoute = StudyMediaRouteImport.update({
+  id: '/study_/media',
+  path: '/study/media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiIntegrationsCalibreStatusRoute =
+  ApiIntegrationsCalibreStatusRouteImport.update({
+    id: '/api/integrations/calibre/status',
+    path: '/api/integrations/calibre/status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/study': typeof StudyRoute
+  '/vault': typeof VaultRoute
+  '/legacy/academy': typeof LegacyAcademyRoute
+  '/library/kindle': typeof LibraryKindleRoute
   '/pillars/$pillarId': typeof PillarsPillarIdRoute
+  '/study/media': typeof StudyMediaRoute
+  '/api/integrations/calibre/status': typeof ApiIntegrationsCalibreStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/study': typeof StudyRoute
+  '/vault': typeof VaultRoute
+  '/legacy/academy': typeof LegacyAcademyRoute
+  '/library/kindle': typeof LibraryKindleRoute
   '/pillars/$pillarId': typeof PillarsPillarIdRoute
+  '/study/media': typeof StudyMediaRoute
+  '/api/integrations/calibre/status': typeof ApiIntegrationsCalibreStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/study': typeof StudyRoute
+  '/vault': typeof VaultRoute
+  '/legacy/academy': typeof LegacyAcademyRoute
+  '/library/kindle': typeof LibraryKindleRoute
   '/pillars/$pillarId': typeof PillarsPillarIdRoute
+  '/study_/media': typeof StudyMediaRoute
+  '/api/integrations/calibre/status': typeof ApiIntegrationsCalibreStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/study' | '/pillars/$pillarId'
+  fullPaths:
+    | '/'
+    | '/study'
+    | '/vault'
+    | '/legacy/academy'
+    | '/library/kindle'
+    | '/pillars/$pillarId'
+    | '/study/media'
+    | '/api/integrations/calibre/status'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/study' | '/pillars/$pillarId'
-  id: '__root__' | '/' | '/study' | '/pillars/$pillarId'
+  to:
+    | '/'
+    | '/study'
+    | '/vault'
+    | '/legacy/academy'
+    | '/library/kindle'
+    | '/pillars/$pillarId'
+    | '/study/media'
+    | '/api/integrations/calibre/status'
+  id:
+    | '__root__'
+    | '/'
+    | '/study'
+    | '/vault'
+    | '/legacy/academy'
+    | '/library/kindle'
+    | '/pillars/$pillarId'
+    | '/study_/media'
+    | '/api/integrations/calibre/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   StudyRoute: typeof StudyRoute
+  VaultRoute: typeof VaultRoute
+  LegacyAcademyRoute: typeof LegacyAcademyRoute
+  LibraryKindleRoute: typeof LibraryKindleRoute
   PillarsPillarIdRoute: typeof PillarsPillarIdRoute
+  StudyMediaRoute: typeof StudyMediaRoute
+  ApiIntegrationsCalibreStatusRoute: typeof ApiIntegrationsCalibreStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,11 +151,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vault': {
+      id: '/vault'
+      path: '/vault'
+      fullPath: '/vault'
+      preLoaderRoute: typeof VaultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legacy/academy': {
+      id: '/legacy/academy'
+      path: '/legacy/academy'
+      fullPath: '/legacy/academy'
+      preLoaderRoute: typeof LegacyAcademyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library/kindle': {
+      id: '/library/kindle'
+      path: '/library/kindle'
+      fullPath: '/library/kindle'
+      preLoaderRoute: typeof LibraryKindleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pillars/$pillarId': {
       id: '/pillars/$pillarId'
       path: '/pillars/$pillarId'
       fullPath: '/pillars/$pillarId'
       preLoaderRoute: typeof PillarsPillarIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/study_/media': {
+      id: '/study_/media'
+      path: '/study/media'
+      fullPath: '/study/media'
+      preLoaderRoute: typeof StudyMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/integrations/calibre/status': {
+      id: '/api/integrations/calibre/status'
+      path: '/api/integrations/calibre/status'
+      fullPath: '/api/integrations/calibre/status'
+      preLoaderRoute: typeof ApiIntegrationsCalibreStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -88,7 +199,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   StudyRoute: StudyRoute,
+  VaultRoute: VaultRoute,
+  LegacyAcademyRoute: LegacyAcademyRoute,
+  LibraryKindleRoute: LibraryKindleRoute,
   PillarsPillarIdRoute: PillarsPillarIdRoute,
+  StudyMediaRoute: StudyMediaRoute,
+  ApiIntegrationsCalibreStatusRoute: ApiIntegrationsCalibreStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

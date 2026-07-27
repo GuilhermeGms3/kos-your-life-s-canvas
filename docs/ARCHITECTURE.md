@@ -60,6 +60,15 @@ Opcoes futuras:
 - Pasta de biblioteca para PDFs/epubs.
 - Banco vetorial local para busca semantica e perguntas.
 
+Estado atual:
+
+- LocalStorage para metadados leves e progresso.
+- IndexedDB para arquivos binarios do Cofre.
+- Referencias por identificador entre Cofre, estudo e Academia.
+
+O IndexedDB e uma etapa de prototipo. Arquivos duraveis devem migrar para
+filesystem ou NAS com metadados em banco local e backup verificavel.
+
 ### Indexacao
 
 Responsavel por transformar conteudo em busca e relacoes:
@@ -81,6 +90,13 @@ Futuramente o KOS pode conversar com:
 - Servicos do NAS.
 - Modelos locais de IA.
 
+Primeiro adaptador:
+
+- `GET /api/integrations/calibre/status` verifica o Calibre-Web no servidor.
+- Credenciais opcionais permanecem em variaveis de ambiente server-only.
+- A UI recebe apenas estado, URL publica e endpoint OPDS.
+- O container e seus dados vivem fora do bundle da aplicacao.
+
 ## Principios tecnicos
 
 - Comecar pequeno e funcional.
@@ -89,4 +105,3 @@ Futuramente o KOS pode conversar com:
 - Nao depender de servicos cloud para o uso essencial.
 - Cada integracao deve ser opcional.
 - O front deve continuar bonito, mas nao pode impedir usabilidade.
-

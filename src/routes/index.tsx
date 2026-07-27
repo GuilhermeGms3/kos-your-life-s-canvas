@@ -38,6 +38,7 @@ import {
   Link2,
   Compass,
   BookMarked,
+  Archive,
   Feather,
   ArrowLeft,
 } from "lucide-react";
@@ -291,11 +292,38 @@ function TopBar({ pillar }: { pillar: Pillar }) {
       </div>
       <div className="flex items-center gap-6 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
         <span className="hidden md:inline">{pillar.toneLabel}</span>
+        <nav className="hidden items-center gap-2 lg:flex" aria-label="Atividades principais">
+          <Link
+            to="/study"
+            className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-foreground/90 transition-colors hover:bg-foreground/[0.08] focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            Estudo
+          </Link>
+          <Link
+            to="/vault"
+            className="flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-foreground/90 transition-colors hover:bg-foreground/[0.08] focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <Archive className="h-3.5 w-3.5" />
+            Cofre
+          </Link>
+          <Link
+            to="/study/media"
+            className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-foreground/90 transition-colors hover:bg-foreground/[0.08] focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            Video
+          </Link>
+          <Link
+            to="/legacy/academy"
+            className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-foreground/90 transition-colors hover:bg-foreground/[0.08] focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            Academia
+          </Link>
+        </nav>
         <Link
           to="/study"
-          className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-foreground/90 transition-colors hover:bg-foreground/[0.08] focus:outline-none focus:ring-1 focus:ring-ring"
+          className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-foreground/90 transition-colors hover:bg-foreground/[0.08] focus:outline-none focus:ring-1 focus:ring-ring lg:hidden"
         >
-          Study Core
+          Abrir
         </Link>
         <span>{time}</span>
       </div>

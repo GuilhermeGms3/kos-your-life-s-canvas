@@ -5,6 +5,30 @@ final de banco.
 
 ## Entidades principais
 
+### PillarRecord
+
+Um registro transversal permite iniciar os pilares antes de existirem modelos
+especializados para cada dominio.
+
+Campos iniciais:
+
+- `id`
+- `pillarId`
+- `domainId`
+- `kind`
+- `title`
+- `details`
+- `tags`
+- `status`
+- `createdAt`
+- `updatedAt`
+
+Regra:
+
+O registro transversal serve para captura e descoberta de requisitos. Quando um
+fluxo amadurecer, ele pode ganhar uma entidade propria sem perder sua origem,
+seu contexto ou suas relacoes.
+
 ### Note
 
 Uma nota e a unidade basica de pensamento registrado.
@@ -130,4 +154,3 @@ Tipos sugeridos:
 ## Regra de ouro
 
 O KOS deve guardar nao apenas o conteudo, mas o contexto do conteudo.
-

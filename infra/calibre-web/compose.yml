@@ -1,0 +1,16 @@
+services:
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: kos-calibre-web
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-America/Sao_Paulo}
+    volumes:
+      - ./data/config:/config
+      - ./data/library:/books
+    ports:
+      - "${CALIBRE_WEB_PORT:-8083}:8083"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true

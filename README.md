@@ -16,6 +16,10 @@ partir do proprio material do usuario.
 
 - [Visao](docs/VISION.md)
 - [Produto](docs/PRODUCT.md)
+- [Mapa dos pilares](docs/PILLARS.md)
+- [Cofre de arquivos](docs/FILE_VAULT.md)
+- [Oficina Kindle](docs/KINDLE_WORKSHOP.md)
+- [Ecossistema de aprendizagem](docs/LEARNING_ECOSYSTEM.md)
 - [Fase 1](docs/PHASE_1.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Modelo de dados](docs/DATA_MODEL.md)
@@ -24,3 +28,15 @@ partir do proprio material do usuario.
 - [Integracoes futuras](docs/INTEGRATIONS.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Plano de implementacao](docs/IMPLEMENTATION_PLAN.md)
+
+## Primeiro servico integrado
+
+O Calibre-Web pode ser preparado e iniciado separadamente:
+
+```powershell
+npm run calibre:bootstrap
+npm run calibre:up
+```
+
+Consulte [a integracao do Calibre-Web](infra/calibre-web/README.md) antes do
+primeiro uso.

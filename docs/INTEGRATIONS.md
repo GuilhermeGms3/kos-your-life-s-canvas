@@ -34,11 +34,33 @@ Uso possivel:
 
 Referencia forte para catalogar ebooks e PDFs.
 
-Uso possivel:
+Estado:
 
-- Manter Calibre como biblioteca tecnica.
-- Fazer o KOS ler metadados ou apontar para acervo.
-- Usar KOS como camada de estudo, anotacao e relacao conceitual por cima.
+- Primeira integracao ativa.
+- Container opcional em `infra/calibre-web`.
+- Estado de conexao e acesso direto exibidos na Library Orbit.
+- Endpoint OPDS reservado para a proxima etapa de importacao de metadados.
+
+Divisao de responsabilidades:
+
+- Calibre-Web mantem arquivos, capas, formatos e catalogo tecnico.
+- KOS mantem estado pessoal, observacoes, notas, fichamentos, perguntas e
+  relacoes.
+- O KOS continua utilizavel quando o Calibre-Web estiver desligado.
+
+### Calibre Desktop / Kindle
+
+Estado:
+
+- Oficina Kindle ativa em `/library/kindle`.
+- Bridge local opcional para o `ebook-convert` do Calibre 64.
+- Conversao para EPUB e AZW3.
+- Inspecao de EPUB para detectar ausencia de texto e indice.
+- Fila persistente de revisao, problemas, aprovacao e envio.
+- Conexao autorizada pelo navegador com a pasta `documents` do Kindle.
+
+O Calibre Desktop converte. O Calibre-Web cataloga. O KOS organiza o processo e
+registra se o livro realmente ficou legivel.
 
 ## Projetos
 
@@ -82,4 +104,3 @@ Uma integracao so deve entrar quando responder claramente:
 - Quais dados ela controla?
 - O KOS depende dela ou apenas conversa com ela?
 - O usuario consegue continuar usando o KOS se ela cair?
-

@@ -79,9 +79,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "color-scheme", content: "dark" },
       { title: "KOS — Knowledge Operating System" },
-      { name: "description", content: "A living, personal system to store, connect, and evolve a lifetime of knowledge." },
+      {
+        name: "description",
+        content: "A living, personal system to store, connect, and evolve a lifetime of knowledge.",
+      },
       { property: "og:title", content: "KOS — Knowledge Operating System" },
-      { property: "og:description", content: "A living, personal system to store, connect, and evolve a lifetime of knowledge." },
+      {
+        property: "og:description",
+        content: "A living, personal system to store, connect, and evolve a lifetime of knowledge.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -91,7 +97,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap",
       },
     ],
   }),

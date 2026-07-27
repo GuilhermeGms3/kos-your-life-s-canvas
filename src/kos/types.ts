@@ -52,6 +52,21 @@ export type RecentEntity = {
   meta: string;
 };
 
+export type PillarRecordStatus = "active" | "archived";
+
+export type PillarRecord = {
+  id: string;
+  pillarId: PillarId;
+  domainId: string;
+  kind: string;
+  title: string;
+  details: string;
+  tags: string[];
+  status: PillarRecordStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Pillar = {
   id: PillarId;
   index: string;

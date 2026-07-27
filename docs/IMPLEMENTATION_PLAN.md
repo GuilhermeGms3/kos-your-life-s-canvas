@@ -2,6 +2,58 @@
 
 Este plano transforma a Fase 1 em passos pequenos e executaveis.
 
+## Marco transversal: Cofre, Midia e Academia
+
+Estado inicial:
+
+- Rota `/vault` com upload multiplo e persistencia IndexedDB.
+- Organizacao por pilar, colecao, tags e descricao.
+- Visualizacao local de imagem, video, audio e PDF.
+- Rota `/study/media` com retomada de video e anotacoes temporais.
+- Linha de anotacoes clicavel que funciona como sumario autoral.
+- Rota `/legacy/academy` com modos Aprender e Lecionar.
+- Grafo de progressao com pre-requisitos e desbloqueios.
+- Recompensas da Academia vinculadas a arquivos do Cofre.
+- Atlas da Academia com 26 disciplinas e mais de 300 nucleos interligados.
+- Navegacao persistente entre Inicio, Estudo, Cofre, Video e Academia.
+
+Proximos passos:
+
+- Relacionar arquivos diretamente a livros, notas e conceitos.
+- Fichamentos de PDF e ebook.
+- Edicao autoral das trilhas da Academia.
+- Perfis locais separados para estudantes.
+- Migracao do Cofre para armazenamento duravel.
+
+## Marco transversal: fundacao dos seis pilares
+
+Objetivo:
+
+Fazer os pilares deixarem de ser apenas apresentacoes visuais sem disputar
+prioridade com o Study Core.
+
+Status inicial:
+
+- Salas navegaveis para Experience, Creation, Memory, Discovery e Legacy.
+- Navegacao direta entre os seis pilares.
+- Selecao de dominio por foco.
+- Captura persistida no navegador em todos os pilares.
+- Registros com titulo, conteudo, tags, tipo, dominio, estado e datas.
+- Acervo recente filtrado pelo dominio ativo.
+- Atalho de teclado `N` para abrir a captura e `Esc` para fecha-la.
+
+Proximos passos transversais:
+
+- Edicao, arquivamento e exclusao recuperavel de registros.
+- Busca entre pilares.
+- Relacoes manuais entre registros.
+- Exportacao em formato aberto.
+- Migracao da persistencia local para repositorio local duravel.
+
+Referencia:
+
+- Consultar `docs/PILLARS.md` para a evolucao especifica de cada pilar.
+
 ## Marco 0: Fundacao do KOS
 
 Objetivo:
@@ -99,6 +151,20 @@ Primeira versao:
 - Campo de observacoes.
 - Associacao simples entre livro e notas.
 
+Status:
+
+- Cadastro manual expandido com autores, categorias, status, formato, posse,
+  localizacao e observacoes.
+- Edicao persistida de livros.
+- Associacao e remocao de notas vinculadas ao livro.
+- Ponte de estado com Calibre-Web dentro da Library Orbit.
+- Infraestrutura Docker opcional em `infra/calibre-web`.
+
+Proximo passo:
+
+- Importar metadados selecionados pelo catalogo OPDS sem duplicar os arquivos no
+  KOS.
+
 ## Marco 4: Fichamentos
 
 Objetivo:
@@ -160,12 +226,14 @@ Primeira versao:
 
 1. Reorganizar front.
 2. Criar tipos e armazenamento local.
-3. Implementar notas.
-4. Implementar livros.
-5. Implementar fichamentos.
-6. Implementar perguntas rapidas.
-7. Implementar conceitos.
-8. Criar tela integrada de sessao de estudo.
+3. Dar captura basica aos seis pilares.
+4. Implementar notas.
+5. Implementar livros.
+6. Implementar fichamentos.
+7. Implementar perguntas rapidas.
+8. Implementar conceitos.
+9. Criar tela integrada de sessao de estudo.
+10. Criar busca e relacoes transversais.
 
 ## Cuidado importante
 

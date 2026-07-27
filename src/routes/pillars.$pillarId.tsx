@@ -11,12 +11,28 @@ import {
   LibraryBig,
   Link2,
   NotebookPen,
+  Plus,
+  Save,
   Sparkles,
+  X,
 } from "lucide-react";
-import type { ComponentType } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import type { ComponentType, FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { getPillarRoom, PILLARS, type KosDomain, type Pillar, type PillarId } from "@/kos";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  getPillarRoom,
+  PILLAR_CAPTURE_COPY,
+  PILLARS,
+  type KosDomain,
+  type Pillar,
+  type PillarId,
+  type PillarRecord,
+} from "@/kos";
+import { useKosLocalState } from "@/kos/use-kos-local-state";
 
 export const Route = createFileRoute("/pillars/$pillarId")({
   loader: ({ params }) => {
@@ -31,10 +47,10 @@ export const Route = createFileRoute("/pillars/$pillarId")({
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: `${loaderData?.room.roomName ?? "Pillar"} · KOS` },
+      { title: `${loaderData?.room.roomName ?? "Pillar"} - KOS` },
       {
         name: "description",
-        content: loaderData?.room.thesis ?? "A seed room inside KOS.",
+        content: loaderData?.room.thesis ?? "A living room inside KOS.",
       },
     ],
   }),
@@ -66,11 +82,91 @@ const DOMAIN_ICONS: Record<string, ComponentType<{ className?: string; strokeWid
   wisdom: Sparkles,
 };
 
+function makeId(prefix: string) {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function parseTags(value: string) {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 function PillarRoom() {
   const { pillar, room } = Route.useLoaderData();
+  const captureCopy = PILLAR_CAPTURE_COPY[pillar.id];
+  const [records, setRecords] = useKosLocalState<PillarRecord[]>(
+    `kos.pillars.${pillar.id}.records`,
+    [],
+  );
+  const [activeDomainId, setActiveDomainId] = useState(pillar.domains[0]?.id ?? "");
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [draft, setDraft] = useState({ title: "", details: "", tags: "" });
+
+  const activeDomain =
+    pillar.domains.find((domain) => domain.id === activeDomainId) ?? pillar.domains[0];
+  const visibleRecords = useMemo(
+    () => records.filter((record) => record.domainId === activeDomainId),
+    [activeDomainId, records],
+  );
+
+  useEffect(() => {
+    setActiveDomainId(pillar.domains[0]?.id ?? "");
+    setComposerOpen(false);
+  }, [pillar]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setComposerOpen(false);
+      if (
+        event.key.toLowerCase() === "n" &&
+        !composerOpen &&
+        !["INPUT", "TEXTAREA"].includes((event.target as HTMLElement).tagName)
+      ) {
+        setComposerOpen(true);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [composerOpen]);
+
+  function createRecord(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const title = draft.title.trim();
+    if (!title || !activeDomain) return;
+
+    const now = new Date().toISOString();
+    const record: PillarRecord = {
+      id: makeId(pillar.id),
+      pillarId: pillar.id,
+      domainId: activeDomain.id,
+      kind: activeDomain.name.toUpperCase(),
+      title,
+      details: draft.details.trim(),
+      tags: parseTags(draft.tags),
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setRecords([record, ...records]);
+    setDraft({ title: "", details: "", tags: "" });
+    setComposerOpen(false);
+  }
 
   return (
-    <main className="min-h-dvh overflow-hidden bg-background text-foreground">
+    <main className="min-h-dvh overflow-x-hidden bg-background text-foreground">
       <RoomAmbient pillar={pillar} />
 
       <div className="relative mx-auto flex min-h-dvh w-full max-w-[1720px] flex-col px-5 py-5 md:px-9 lg:px-12">
@@ -80,120 +176,226 @@ function PillarRoom() {
               asChild
               variant="ghost"
               size="icon"
-              className="h-12 w-12 rounded-full border border-foreground/10 bg-foreground/[0.05] backdrop-blur-xl"
+              className="h-12 w-12 shrink-0 rounded-full border border-foreground/10 bg-foreground/[0.05] backdrop-blur-xl"
             >
               <Link to="/" aria-label="Voltar para o portal KOS">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
             <div>
-              <div className="text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
-                KOS · {pillar.index} · {pillar.name}
+              <div className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
+                KOS / {pillar.index} / {pillar.name}
               </div>
               <h1 className="serif mt-1 text-4xl leading-none md:text-6xl">{room.roomName}</h1>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-            <span className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2">
-              {pillar.domains.length} dominios
-            </span>
-            <span className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2">
-              {pillar.recent.length} sementes
-            </span>
-          </div>
+          <nav aria-label="Pilares do KOS" className="flex max-w-full gap-2 overflow-x-auto pb-1">
+            {PILLARS.map((item) => (
+              <Button
+                key={item.id}
+                asChild
+                variant="ghost"
+                className={`h-11 shrink-0 rounded-full border px-4 ${
+                  item.id === pillar.id
+                    ? "border-foreground/25 bg-foreground/[0.1] text-foreground"
+                    : "border-foreground/10 bg-foreground/[0.035] text-muted-foreground"
+                }`}
+              >
+                <Link
+                  to={item.id === "knowledge" ? "/study" : "/pillars/$pillarId"}
+                  params={item.id === "knowledge" ? undefined : { pillarId: item.id }}
+                >
+                  <span className="text-xs tabular-nums">{item.index}</span>
+                  <span className="text-sm">{item.name}</span>
+                </Link>
+              </Button>
+            ))}
+          </nav>
         </header>
 
-        <section className="mt-9 grid gap-5 lg:grid-cols-[minmax(0,1fr)_390px]">
-          <div className="min-w-0">
-            <div
-              className="relative min-h-[390px] overflow-hidden rounded-[34px] border border-foreground/10 bg-foreground/[0.055] p-7 shadow-[0_44px_140px_-85px_oklch(0_0_0)] backdrop-blur-2xl md:p-9"
-              style={{
-                boxShadow: `0 46px 140px -90px color-mix(in oklab, ${pillar.hue} 55%, oklch(0 0 0))`,
-              }}
-            >
-              <div
-                aria-hidden
-                className="absolute inset-0"
-                style={{
-                  background: `radial-gradient(70% 70% at 20% 0%, color-mix(in oklab, ${pillar.hue} 22%, transparent), transparent 72%)`,
-                }}
-              />
-              <div className="relative max-w-3xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-background/35 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-                  <Sparkles className="h-3.5 w-3.5" style={{ color: pillar.hue }} />
-                  Sala-semente
-                </div>
-                <h2 className="serif mt-7 text-5xl leading-[0.92] md:text-8xl">{pillar.name}</h2>
-                <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-                  {room.thesis}
-                </p>
-              </div>
-              <div className="relative mt-9 grid gap-3 md:grid-cols-3">
-                {room.firstActions.slice(0, 3).map((action) => (
-                  <div
-                    key={action}
-                    className="rounded-2xl border border-foreground/10 bg-background/35 p-4"
-                  >
-                    <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                      Primeiro gesto
-                    </div>
-                    <p className="mt-3 text-sm leading-6">{action}</p>
-                  </div>
-                ))}
-              </div>
+        <section className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+          <div className="max-w-4xl">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+              <Sparkles className="h-4 w-4" style={{ color: pillar.hue }} />
+              Sala ativa
             </div>
-
-            <section className="mt-6 overflow-x-auto pb-6">
-              <div className="flex gap-4 pr-6">
-                {pillar.domains.map((domain, index) => (
-                  <DomainSeed key={domain.id} domain={domain} pillar={pillar} index={index} />
-                ))}
-              </div>
-            </section>
+            <h2 className="serif mt-5 text-6xl leading-[0.9] md:text-8xl">{pillar.name}</h2>
+            <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
+              {room.thesis}
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Button onClick={() => setComposerOpen(true)} className="h-12 rounded-full px-5">
+                <Plus className="h-4 w-4" />
+                {captureCopy.action}
+              </Button>
+              {pillar.id === "legacy" && (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-12 rounded-full border-foreground/10 bg-foreground/[0.04] px-5"
+                >
+                  <Link to="/legacy/academy">Abrir Academia</Link>
+                </Button>
+              )}
+              <span className="text-xs text-muted-foreground">N / nova captura</span>
+            </div>
           </div>
 
-          <aside className="rounded-[30px] border border-foreground/10 bg-background/45 p-5 backdrop-blur-2xl">
-            <div className="text-[11px] uppercase tracking-[0.26em] text-muted-foreground">
-              Atmosfera
+          <div className="border-l border-foreground/10 pl-6">
+            <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+              Agora neste pilar
             </div>
-            <p className="mt-3 text-sm leading-7 text-muted-foreground">{room.atmosphere}</p>
+            <div className="mt-4 grid grid-cols-3 gap-4">
+              <Metric value={records.length} label="registros" />
+              <Metric value={pillar.domains.length} label="dominios" />
+              <Metric value={visibleRecords.length} label="em foco" />
+            </div>
+            <p className="mt-5 text-sm leading-6 text-muted-foreground">{room.atmosphere}</p>
+          </div>
+        </section>
 
-            <div className="mt-7">
-              <h2 className="text-lg font-medium">Sistemas futuros</h2>
-              <div className="mt-4 space-y-3">
-                {room.futureSystems.map((system) => (
-                  <div
-                    key={system}
-                    className="rounded-2xl border border-foreground/10 bg-foreground/[0.035] p-4"
-                  >
-                    <p className="text-sm leading-6">{system}</p>
-                  </div>
-                ))}
+        <section className="mt-11" aria-labelledby="domain-heading">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                Trilho de foco
               </div>
+              <h2 id="domain-heading" className="mt-2 text-xl font-medium">
+                Escolha um dominio
+              </h2>
+            </div>
+            <span className="hidden text-xs text-muted-foreground md:block">
+              A captura sera guardada no dominio selecionado
+            </span>
+          </div>
+
+          <div className="-mx-5 mt-5 overflow-x-auto px-5 pb-5 md:-mx-9 md:px-9 lg:-mx-12 lg:px-12">
+            <div className="flex gap-4">
+              {pillar.domains.map((domain, index) => (
+                <DomainSeed
+                  key={domain.id}
+                  domain={domain}
+                  pillar={pillar}
+                  index={index}
+                  selected={domain.id === activeDomainId}
+                  recordCount={records.filter((record) => record.domainId === domain.id).length}
+                  onSelect={() => setActiveDomainId(domain.id)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-5 grid gap-8 pb-16 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                  Acervo local
+                </div>
+                <h2 className="mt-2 text-xl font-medium">{activeDomain?.name}</h2>
+              </div>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {visibleRecords.length} registros
+              </span>
             </div>
 
-            <div className="mt-7">
-              <h2 className="text-lg font-medium">Sementes recentes</h2>
-              <div className="mt-4 space-y-3">
-                {pillar.recent.slice(0, 4).map((item) => (
+            {visibleRecords.length ? (
+              <div className="mt-5 divide-y divide-foreground/10 border-y border-foreground/10">
+                {visibleRecords.map((record) => (
                   <article
-                    key={`${item.kind}-${item.title}`}
-                    className="rounded-2xl border border-foreground/10 bg-foreground/[0.035] p-4"
+                    key={record.id}
+                    className="grid gap-3 py-5 md:grid-cols-[150px_1fr_auto]"
                   >
-                    <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                      {item.kind}
+                    <div>
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                        {record.kind}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {formatDate(record.createdAt)}
+                      </div>
                     </div>
-                    <p className="mt-2 text-sm leading-6">{item.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{item.meta}</p>
+                    <div>
+                      <h3 className="text-base font-medium">{record.title}</h3>
+                      {record.details && (
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                          {record.details}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 md:max-w-48 md:justify-end">
+                      {record.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-foreground/10 px-2.5 py-1 text-xs text-muted-foreground"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </article>
                 ))}
               </div>
+            ) : (
+              <div className="mt-5 border-y border-foreground/10 py-10">
+                <p className="text-base">Este dominio ainda esta em silencio.</p>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+                  O primeiro registro transforma esta sala de conceito em acervo pessoal.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setComposerOpen(true)}
+                  className="mt-5 h-11 rounded-full"
+                >
+                  <Plus className="h-4 w-4" />
+                  Criar primeiro registro
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <aside className="border-t border-foreground/10 pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+            <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+              Horizonte
+            </div>
+            <h2 className="mt-2 text-xl font-medium">Sistemas em preparacao</h2>
+            <div className="mt-5 divide-y divide-foreground/10 border-y border-foreground/10">
+              {room.futureSystems.map((system, index) => (
+                <div key={system} className="flex gap-4 py-4">
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <p className="text-sm leading-6">{system}</p>
+                </div>
+              ))}
             </div>
           </aside>
         </section>
       </div>
+
+      <AnimatePresence>
+        {composerOpen && activeDomain && (
+          <CapturePanel
+            pillar={pillar}
+            domain={activeDomain}
+            draft={draft}
+            onDraftChange={setDraft}
+            onClose={() => setComposerOpen(false)}
+            onSubmit={createRecord}
+          />
+        )}
+      </AnimatePresence>
     </main>
+  );
+}
+
+function Metric({ value, label }: { value: number; label: string }) {
+  return (
+    <div>
+      <div className="serif text-3xl leading-none tabular-nums">{value}</div>
+      <div className="mt-2 text-[11px] text-muted-foreground">{label}</div>
+    </div>
   );
 }
 
@@ -221,30 +423,49 @@ function DomainSeed({
   domain,
   pillar,
   index,
+  selected,
+  recordCount,
+  onSelect,
 }: {
   domain: KosDomain;
   pillar: Pillar;
   index: number;
+  selected: boolean;
+  recordCount: number;
+  onSelect: () => void;
 }) {
   const Icon = DOMAIN_ICONS[domain.id] ?? Sparkles;
 
   return (
-    <button
+    <motion.button
       type="button"
-      className="relative flex h-[260px] w-[240px] shrink-0 flex-col justify-between overflow-hidden rounded-[28px] border border-foreground/10 bg-foreground/[0.045] p-5 text-left opacity-85 transition-all hover:-translate-y-1 hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-ring"
+      onClick={onSelect}
+      aria-pressed={selected}
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.98 }}
+      className="relative flex h-[250px] w-[230px] shrink-0 flex-col justify-between overflow-hidden rounded-[28px] border p-5 text-left transition-[border-color,background-color,opacity] focus:outline-none focus:ring-2 focus:ring-ring motion-reduce:transform-none"
+      style={{
+        borderColor: selected
+          ? `color-mix(in oklab, ${pillar.hue} 65%, transparent)`
+          : "color-mix(in oklab, var(--foreground) 10%, transparent)",
+        background: selected
+          ? `color-mix(in oklab, ${pillar.hue} 13%, var(--background))`
+          : "color-mix(in oklab, var(--foreground) 4.5%, transparent)",
+        opacity: selected ? 1 : 0.76,
+      }}
     >
       <div
         aria-hidden
         className="absolute inset-0"
         style={{
-          background: `radial-gradient(80% 65% at 25% 10%, color-mix(in oklab, ${pillar.hue} 18%, transparent), transparent 72%)`,
+          background: `radial-gradient(80% 65% at 25% 10%, color-mix(in oklab, ${pillar.hue} 20%, transparent), transparent 72%)`,
         }}
       />
       <div className="relative flex items-center justify-between">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-foreground/10 bg-background/35">
           <Icon className="h-5 w-5" strokeWidth={1.5} />
         </div>
-        <span className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+        <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
           {String(index + 1).padStart(2, "0")}
         </span>
       </div>
@@ -252,9 +473,124 @@ function DomainSeed({
         <h3 className="serif text-3xl leading-none">{domain.name}</h3>
         <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground">{domain.blurb}</p>
       </div>
-      <div className="relative text-xs tabular-nums text-muted-foreground">
-        {domain.count.toLocaleString()} entidades planejadas
+      <div className="relative flex items-center justify-between text-xs tabular-nums text-muted-foreground">
+        <span>{recordCount} seus</span>
+        <span>{selected ? "em foco" : "abrir"}</span>
       </div>
-    </button>
+    </motion.button>
+  );
+}
+
+function CapturePanel({
+  pillar,
+  domain,
+  draft,
+  onDraftChange,
+  onClose,
+  onSubmit,
+}: {
+  pillar: Pillar;
+  domain: KosDomain;
+  draft: { title: string; details: string; tags: string };
+  onDraftChange: (draft: { title: string; details: string; tags: string }) => void;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const copy = PILLAR_CAPTURE_COPY[pillar.id];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex justify-end bg-background/60 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <motion.aside
+        initial={{ x: 60, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: 40, opacity: 0 }}
+        transition={{ duration: 0.24, ease: "easeOut" }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="capture-title"
+        className="h-dvh w-full max-w-xl overflow-y-auto border-l border-foreground/10 bg-background/95 p-6 shadow-2xl md:p-8"
+      >
+        <div className="flex items-start justify-between gap-5">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+              {copy.eyebrow} / {domain.name}
+            </div>
+            <h2 id="capture-title" className="serif mt-3 text-4xl">
+              {copy.action}
+            </h2>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            aria-label="Fechar captura"
+            className="h-11 w-11 rounded-full"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <form onSubmit={onSubmit} className="mt-9 space-y-6">
+          <label className="block">
+            <span className="text-sm font-medium">{copy.titleLabel}</span>
+            <Input
+              autoFocus
+              required
+              value={draft.title}
+              onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
+              placeholder={copy.titlePlaceholder}
+              className="mt-2 h-12 bg-foreground/[0.04]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium">{copy.detailsLabel}</span>
+            <Textarea
+              value={draft.details}
+              onChange={(event) => onDraftChange({ ...draft, details: event.target.value })}
+              placeholder={copy.detailsPlaceholder}
+              className="mt-2 min-h-44 resize-y bg-foreground/[0.04]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium">Tags</span>
+            <Input
+              value={draft.tags}
+              onChange={(event) => onDraftChange({ ...draft, tags: event.target.value })}
+              placeholder="separe, por, virgulas"
+              className="mt-2 h-12 bg-foreground/[0.04]"
+            />
+            <span className="mt-2 block text-xs text-muted-foreground">
+              Use poucas palavras para reencontrar este registro depois.
+            </span>
+          </label>
+
+          <div className="flex gap-3 border-t border-foreground/10 pt-6">
+            <Button type="submit" disabled={!draft.title.trim()} className="h-12 rounded-full px-5">
+              <Save className="h-4 w-4" />
+              Salvar no pilar
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              className="h-12 rounded-full px-5"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </motion.aside>
+    </motion.div>
   );
 }

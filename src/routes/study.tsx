@@ -6,9 +6,12 @@ import {
   CalendarClock,
   CircleHelp,
   Edit3,
+  ExternalLink,
   LibraryBig,
+  Link2,
   NotebookPen,
   Plus,
+  RefreshCw,
   Save,
   Search,
   Sparkles,
@@ -18,6 +21,7 @@ import {
 import type { ComponentType, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { KosSystemNav } from "@/components/kos-system-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,7 +54,7 @@ export const Route = createFileRoute("/study")({
 });
 
 type StudyMode = "chamber" | "library" | "forge";
-type ComposerMode = "note" | "book" | "edit-note" | null;
+type ComposerMode = "note" | "book" | "edit-note" | "edit-book" | null;
 type FocusItem =
   | {
       type: "note";
@@ -79,6 +83,51 @@ const BOOK_STATUS_LABELS: Record<BookStatus, string> = {
   abandoned: "Abandonado",
   reference: "Referencia",
 };
+
+const BOOK_FORMAT_LABELS: Record<Book["format"], string> = {
+  physical: "Fisico",
+  pdf: "PDF",
+  epub: "EPUB",
+  audio: "Audio",
+  unknown: "Nao informado",
+};
+
+type BookDraft = {
+  id: string;
+  title: string;
+  authors: string;
+  categories: string;
+  status: BookStatus;
+  format: Book["format"];
+  owned: boolean;
+  location: string;
+  notes: string;
+  linkedNoteIds: string[];
+};
+
+type CalibreStatus = {
+  service: "calibre-web";
+  online: boolean;
+  status: number | null;
+  url: string;
+  opdsUrl: string;
+  message?: string;
+};
+
+function emptyBookDraft(): BookDraft {
+  return {
+    id: "",
+    title: "",
+    authors: "",
+    categories: "",
+    status: "to_read",
+    format: "unknown",
+    owned: true,
+    location: "",
+    notes: "",
+    linkedNoteIds: [],
+  };
+}
 
 const MODES: Array<{
   id: StudyMode;
@@ -153,7 +202,7 @@ function StudyCore() {
     content: "",
     tags: "",
   });
-  const [bookDraft, setBookDraft] = useState({ title: "", authors: "", categories: "" });
+  const [bookDraft, setBookDraft] = useState<BookDraft>(emptyBookDraft);
   const [activeSource, setActiveSource] = useState(seedNotes[0]?.id ?? "");
 
   const currentMode = MODES.find((item) => item.id === mode) ?? MODES[0];
@@ -208,6 +257,8 @@ function StudyCore() {
   const readingBooks = books.filter((book) => book.status === "reading");
   const activeNote =
     activeItem?.type === "note" ? notes.find((note) => note.id === activeItem.id) : undefined;
+  const activeBook =
+    activeItem?.type === "book" ? books.find((book) => book.id === activeItem.id) : undefined;
 
   useEffect(() => {
     if (focusItems.length > 0 && !focusItems.some((item) => item.id === activeSource)) {
@@ -252,6 +303,7 @@ function StudyCore() {
         setComposer("book");
       } else if (event.key.toLowerCase() === "e") {
         if (activeNote) openEditNote(activeNote);
+        if (activeBook) openEditBook(activeBook);
       } else if (event.key.toLowerCase() === "q") {
         generateQuestion();
       }
@@ -338,23 +390,77 @@ function StudyCore() {
     const book: Book = {
       id: makeId("book"),
       title,
-      authors: bookDraft.authors
-        .split(",")
-        .map((author) => author.trim())
-        .filter(Boolean),
-      status: "reading",
-      categories: bookDraft.categories
-        .split(",")
-        .map((category) => category.trim())
-        .filter(Boolean),
-      format: "unknown",
-      owned: true,
-      notes: "Entrada criada manualmente no Study Core.",
+      authors: parseCsv(bookDraft.authors),
+      status: bookDraft.status,
+      categories: parseCsv(bookDraft.categories),
+      format: bookDraft.format,
+      owned: bookDraft.owned,
+      location: bookDraft.location.trim() || undefined,
+      notes: bookDraft.notes.trim() || undefined,
     };
 
     setBooks([book, ...books]);
+    setNotes(
+      notes.map((note) =>
+        bookDraft.linkedNoteIds.includes(note.id)
+          ? { ...note, linkedBookIds: [...new Set([...note.linkedBookIds, book.id])] }
+          : note,
+      ),
+    );
     setActiveSource(book.id);
-    setBookDraft({ title: "", authors: "", categories: "" });
+    setBookDraft(emptyBookDraft());
+    setComposer(null);
+    setMode("library");
+  }
+
+  function openEditBook(book: Book) {
+    setBookDraft({
+      id: book.id,
+      title: book.title,
+      authors: book.authors.join(", "),
+      categories: book.categories.join(", "),
+      status: book.status,
+      format: book.format,
+      owned: book.owned,
+      location: book.location ?? "",
+      notes: book.notes ?? "",
+      linkedNoteIds: notes
+        .filter((note) => note.linkedBookIds.includes(book.id))
+        .map((note) => note.id),
+    });
+    setComposer("edit-book");
+  }
+
+  function updateBook() {
+    const title = bookDraft.title.trim();
+    if (!bookDraft.id || !title) return;
+
+    setBooks(
+      books.map((book) =>
+        book.id === bookDraft.id
+          ? {
+              ...book,
+              title,
+              authors: parseCsv(bookDraft.authors),
+              categories: parseCsv(bookDraft.categories),
+              status: bookDraft.status,
+              format: bookDraft.format,
+              owned: bookDraft.owned,
+              location: bookDraft.location.trim() || undefined,
+              notes: bookDraft.notes.trim() || undefined,
+            }
+          : book,
+      ),
+    );
+    setNotes(
+      notes.map((note) => {
+        const linkedBookIds = note.linkedBookIds.filter((id) => id !== bookDraft.id);
+        if (bookDraft.linkedNoteIds.includes(note.id)) linkedBookIds.push(bookDraft.id);
+        return { ...note, linkedBookIds };
+      }),
+    );
+    setActiveSource(bookDraft.id);
+    setBookDraft(emptyBookDraft());
     setComposer(null);
     setMode("library");
   }
@@ -408,6 +514,10 @@ function StudyCore() {
           </div>
         </header>
 
+        <div className="mt-6">
+          <KosSystemNav active="study" />
+        </div>
+
         <nav className="mt-7 flex gap-3 overflow-x-auto pb-2" aria-label="Modos do Study Core">
           {MODES.map((item) => {
             const Icon = item.icon;
@@ -459,6 +569,8 @@ function StudyCore() {
               </div>
             </div>
 
+            {mode === "library" && <LibraryBridge />}
+
             <FocusRail
               items={focusItems}
               activeId={activeItem?.id}
@@ -498,6 +610,7 @@ function StudyCore() {
             onCreateNote={() => setComposer("note")}
             onCreateBook={() => setComposer("book")}
             onEditNote={activeNote ? () => openEditNote(activeNote) : undefined}
+            onEditBook={activeBook ? () => openEditBook(activeBook) : undefined}
             onGenerateQuestion={generateQuestion}
           />
         </section>
@@ -528,9 +641,11 @@ function StudyCore() {
           onNoteDraft={setNoteDraft}
           onEditNoteDraft={setEditNoteDraft}
           onBookDraft={setBookDraft}
+          notes={notes}
           onCreateNote={createNote}
           onUpdateNote={updateNote}
           onCreateBook={createBook}
+          onUpdateBook={updateBook}
         />
       )}
     </main>
@@ -564,6 +679,87 @@ function AmbientScene({ color, mode }: { color: string; mode: StudyMode }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function LibraryBridge() {
+  const [status, setStatus] = useState<CalibreStatus | null>(null);
+  const [checking, setChecking] = useState(true);
+
+  async function checkConnection() {
+    setChecking(true);
+    try {
+      const response = await fetch("/api/integrations/calibre/status");
+      const nextStatus = (await response.json()) as CalibreStatus;
+      setStatus(nextStatus);
+    } catch {
+      setStatus({
+        service: "calibre-web",
+        online: false,
+        status: null,
+        url: "http://127.0.0.1:8083",
+        opdsUrl: "http://127.0.0.1:8083/opds",
+        message: "Nao foi possivel consultar a ponte local.",
+      });
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  useEffect(() => {
+    void checkConnection();
+  }, []);
+
+  return (
+    <section className="mb-6 grid gap-4 border-y border-foreground/10 py-5 md:grid-cols-[1fr_auto] md:items-center">
+      <div className="flex items-start gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-foreground/10 bg-foreground/[0.05]">
+          <LibraryBig className="h-5 w-5 text-primary" strokeWidth={1.5} />
+        </div>
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-base font-medium">Calibre-Web</h2>
+            <span
+              className={`rounded-full border px-2.5 py-1 text-[11px] ${
+                status?.online
+                  ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                  : "border-foreground/10 bg-foreground/[0.04] text-muted-foreground"
+              }`}
+            >
+              {checking ? "Verificando" : status?.online ? "Conectado" : "Desligado"}
+            </span>
+          </div>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Arquivos e formatos vivem no Calibre-Web. Notas, estudo e relacoes continuam no KOS.
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => void checkConnection()}
+          disabled={checking}
+          aria-label="Verificar conexao com Calibre-Web"
+          className="h-11 w-11 rounded-full border border-foreground/10"
+        >
+          <RefreshCw
+            className={`h-4 w-4 motion-reduce:animate-none ${checking ? "animate-spin" : ""}`}
+          />
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          className="h-11 rounded-full border-foreground/10 bg-foreground/[0.04]"
+        >
+          <a href={status?.url ?? "http://127.0.0.1:8083"} target="_blank" rel="noreferrer">
+            <ExternalLink className="h-4 w-4" />
+            Abrir biblioteca
+          </a>
+        </Button>
+      </div>
+    </section>
   );
 }
 
@@ -686,6 +882,7 @@ function ContextPanel({
   onCreateNote,
   onCreateBook,
   onEditNote,
+  onEditBook,
   onGenerateQuestion,
 }: {
   item?: FocusItem;
@@ -696,6 +893,7 @@ function ContextPanel({
   onCreateNote: () => void;
   onCreateBook: () => void;
   onEditNote?: () => void;
+  onEditBook?: () => void;
   onGenerateQuestion: () => void;
 }) {
   return (
@@ -759,6 +957,16 @@ function ContextPanel({
             Editar nota
           </Button>
         )}
+        {onEditBook && (
+          <Button
+            onClick={onEditBook}
+            variant="outline"
+            className="h-11 rounded-full border-foreground/10 bg-foreground/[0.04]"
+          >
+            <Edit3 className="h-4 w-4" />
+            Editar livro
+          </Button>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <Button
             onClick={onCreateNote}
@@ -813,43 +1021,68 @@ function ComposerPanel({
   onNoteDraft,
   onEditNoteDraft,
   onBookDraft,
+  notes,
   onCreateNote,
   onUpdateNote,
   onCreateBook,
+  onUpdateBook,
 }: {
   mode: Exclude<ComposerMode, null>;
   noteDraft: { title: string; content: string; tags: string };
   editNoteDraft: { id: string; title: string; content: string; tags: string };
-  bookDraft: { title: string; authors: string; categories: string };
+  bookDraft: BookDraft;
+  notes: Note[];
   onClose: () => void;
   onNoteDraft: (draft: { title: string; content: string; tags: string }) => void;
   onEditNoteDraft: (draft: { id: string; title: string; content: string; tags: string }) => void;
-  onBookDraft: (draft: { title: string; authors: string; categories: string }) => void;
+  onBookDraft: (draft: BookDraft) => void;
   onCreateNote: () => void;
   onUpdateNote: () => void;
   onCreateBook: () => void;
+  onUpdateBook: () => void;
 }) {
   const isNote = mode === "note";
   const isEditNote = mode === "edit-note";
+  const isEditBook = mode === "edit-book";
   const notePanelDraft = isEditNote ? editNoteDraft : noteDraft;
-  const notePanelUpdate = isEditNote ? onEditNoteDraft : onNoteDraft;
+
+  function updateNotePanel(patch: Partial<{ title: string; content: string; tags: string }>) {
+    if (isEditNote) {
+      onEditNoteDraft({ ...editNoteDraft, ...patch });
+      return;
+    }
+
+    onNoteDraft({ ...noteDraft, ...patch });
+  }
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-background/55 p-4 backdrop-blur-md md:items-center">
-      <section className="w-full max-w-3xl rounded-[30px] border border-foreground/10 bg-background/90 p-5 shadow-[0_40px_140px_-70px_oklch(0_0_0)] md:p-6">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="composer-title"
+        className="w-full max-w-3xl rounded-[30px] border border-foreground/10 bg-background/90 p-5 shadow-[0_40px_140px_-70px_oklch(0_0_0)] md:p-6"
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-[11px] uppercase tracking-[0.26em] text-muted-foreground">
               {isNote || isEditNote ? "Study Chamber" : "Library Orbit"}
             </div>
-            <h2 className="serif mt-1 text-4xl leading-none">
-              {isEditNote ? "Editar nota" : isNote ? "Nova nota" : "Novo livro"}
+            <h2 id="composer-title" className="serif mt-1 text-4xl leading-none">
+              {isEditNote
+                ? "Editar nota"
+                : isNote
+                  ? "Nova nota"
+                  : isEditBook
+                    ? "Editar livro"
+                    : "Novo livro"}
             </h2>
           </div>
           <Button
             onClick={onClose}
             variant="ghost"
             size="icon"
+            aria-label="Fechar editor"
             className="h-11 w-11 rounded-full border border-foreground/10 bg-foreground/[0.04]"
           >
             <X className="h-4 w-4" />
@@ -860,9 +1093,7 @@ function ComposerPanel({
           <div className="mt-6 space-y-3">
             <Input
               value={notePanelDraft.title}
-              onChange={(event) =>
-                notePanelUpdate({ ...notePanelDraft, title: event.target.value })
-              }
+              onChange={(event) => updateNotePanel({ title: event.target.value })}
               placeholder="Titulo da nota"
               aria-label="Titulo da nota"
               className="h-12 bg-foreground/[0.04] text-base"
@@ -871,9 +1102,7 @@ function ComposerPanel({
               <Tags className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={notePanelDraft.tags}
-                onChange={(event) =>
-                  notePanelUpdate({ ...notePanelDraft, tags: event.target.value })
-                }
+                onChange={(event) => updateNotePanel({ tags: event.target.value })}
                 placeholder="Tags separadas por virgula"
                 aria-label="Tags da nota"
                 className="h-12 bg-foreground/[0.04] pl-10 text-base"
@@ -881,9 +1110,7 @@ function ComposerPanel({
             </div>
             <Textarea
               value={notePanelDraft.content}
-              onChange={(event) =>
-                notePanelUpdate({ ...notePanelDraft, content: event.target.value })
-              }
+              onChange={(event) => updateNotePanel({ content: event.target.value })}
               placeholder="Escreva o que voce quer lembrar, revisar ou conectar..."
               aria-label="Conteudo da nota"
               className="min-h-52 bg-foreground/[0.04] text-base leading-7"
@@ -898,35 +1125,148 @@ function ComposerPanel({
             </Button>
           </div>
         ) : (
-          <div className="mt-6 space-y-3">
-            <Input
-              value={bookDraft.title}
-              onChange={(event) => onBookDraft({ ...bookDraft, title: event.target.value })}
-              placeholder="Titulo do livro"
-              aria-label="Titulo do livro"
-              className="h-12 bg-foreground/[0.04] text-base"
-            />
-            <Input
-              value={bookDraft.authors}
-              onChange={(event) => onBookDraft({ ...bookDraft, authors: event.target.value })}
-              placeholder="Autores separados por virgula"
-              aria-label="Autores do livro"
-              className="h-12 bg-foreground/[0.04] text-base"
-            />
-            <Input
-              value={bookDraft.categories}
-              onChange={(event) => onBookDraft({ ...bookDraft, categories: event.target.value })}
-              placeholder="Categorias separadas por virgula"
-              aria-label="Categorias do livro"
-              className="h-12 bg-foreground/[0.04] text-base"
-            />
+          <div className="mt-6 max-h-[70dvh] space-y-5 overflow-y-auto pr-1">
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block md:col-span-2">
+                <span className="text-sm font-medium">Titulo</span>
+                <Input
+                  value={bookDraft.title}
+                  onChange={(event) => onBookDraft({ ...bookDraft, title: event.target.value })}
+                  placeholder="Titulo do livro"
+                  className="mt-2 h-12 bg-foreground/[0.04] text-base"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium">Autores</span>
+                <Input
+                  value={bookDraft.authors}
+                  onChange={(event) => onBookDraft({ ...bookDraft, authors: event.target.value })}
+                  placeholder="Separados por virgula"
+                  className="mt-2 h-12 bg-foreground/[0.04] text-base"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium">Categorias</span>
+                <Input
+                  value={bookDraft.categories}
+                  onChange={(event) =>
+                    onBookDraft({ ...bookDraft, categories: event.target.value })
+                  }
+                  placeholder="Separadas por virgula"
+                  className="mt-2 h-12 bg-foreground/[0.04] text-base"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium">Status de leitura</span>
+                <select
+                  value={bookDraft.status}
+                  onChange={(event) =>
+                    onBookDraft({ ...bookDraft, status: event.target.value as BookStatus })
+                  }
+                  className="mt-2 h-12 w-full rounded-md border border-input bg-foreground/[0.04] px-3 text-base focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {Object.entries(BOOK_STATUS_LABELS).map(([value, label]) => (
+                    <option key={value} value={value} className="bg-background">
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium">Formato</span>
+                <select
+                  value={bookDraft.format}
+                  onChange={(event) =>
+                    onBookDraft({
+                      ...bookDraft,
+                      format: event.target.value as Book["format"],
+                    })
+                  }
+                  className="mt-2 h-12 w-full rounded-md border border-input bg-foreground/[0.04] px-3 text-base focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {Object.entries(BOOK_FORMAT_LABELS).map(([value, label]) => (
+                    <option key={value} value={value} className="bg-background">
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block md:col-span-2">
+                <span className="text-sm font-medium">Localizacao</span>
+                <Input
+                  value={bookDraft.location}
+                  onChange={(event) => onBookDraft({ ...bookDraft, location: event.target.value })}
+                  placeholder="Estante, pasta, NAS ou Calibre-Web"
+                  className="mt-2 h-12 bg-foreground/[0.04] text-base"
+                />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="text-sm font-medium">Observacoes</span>
+                <Textarea
+                  value={bookDraft.notes}
+                  onChange={(event) => onBookDraft({ ...bookDraft, notes: event.target.value })}
+                  placeholder="Por que este livro importa, onde voce parou ou o que pretende estudar."
+                  className="mt-2 min-h-28 bg-foreground/[0.04] text-base leading-7"
+                />
+              </label>
+            </div>
+
+            <label className="flex min-h-12 items-center gap-3 border-y border-foreground/10 py-3">
+              <input
+                type="checkbox"
+                checked={bookDraft.owned}
+                onChange={(event) => onBookDraft({ ...bookDraft, owned: event.target.checked })}
+                className="h-4 w-4 accent-primary"
+              />
+              <span className="text-sm">Este livro faz parte do meu acervo</span>
+            </label>
+
+            <fieldset>
+              <legend className="flex items-center gap-2 text-sm font-medium">
+                <Link2 className="h-4 w-4 text-primary" />
+                Notas vinculadas
+              </legend>
+              {notes.length ? (
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  {notes.map((note) => {
+                    const checked = bookDraft.linkedNoteIds.includes(note.id);
+                    return (
+                      <label
+                        key={note.id}
+                        className="flex min-h-12 items-center gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.03] px-3"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            onBookDraft({
+                              ...bookDraft,
+                              linkedNoteIds: checked
+                                ? bookDraft.linkedNoteIds.filter((id) => id !== note.id)
+                                : [...bookDraft.linkedNoteIds, note.id],
+                            })
+                          }
+                          className="h-4 w-4 accent-primary"
+                        />
+                        <span className="line-clamp-1 text-sm">{note.title}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Crie uma nota para poder relaciona-la a este livro.
+                </p>
+              )}
+            </fieldset>
+
             <Button
-              onClick={onCreateBook}
+              onClick={isEditBook ? onUpdateBook : onCreateBook}
               disabled={!bookDraft.title.trim()}
               className="h-12 w-full rounded-full"
             >
-              <Plus className="h-4 w-4" />
-              Adicionar livro
+              {isEditBook ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {isEditBook ? "Salvar alteracoes" : "Adicionar livro"}
             </Button>
           </div>
         )}

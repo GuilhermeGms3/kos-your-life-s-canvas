@@ -7,6 +7,10 @@
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "calibre:bootstrap": "powershell -ExecutionPolicy Bypass -File ./infra/calibre-web/bootstrap.ps1",
+    "calibre:up": "docker compose -f ./infra/calibre-web/compose.yml up -d",
+    "calibre:down": "docker compose -f ./infra/calibre-web/compose.yml down",
+    "calibre:bridge": "node ./scripts/calibre-bridge.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
@@ -50,6 +54,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.575.0",
     "motion": "^12.42.0",
     "react": "^19.2.0",

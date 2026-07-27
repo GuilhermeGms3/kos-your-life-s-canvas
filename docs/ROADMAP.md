@@ -32,6 +32,15 @@ Entregas:
 - Busca simples.
 - Primeira reformulacao da home para acoes reais.
 
+Fundacao transversal incluida:
+
+- Captura local inicial em Experience, Creation, Memory, Discovery e Legacy.
+- Navegacao consistente entre pilares.
+- Modelo comum de registro para permitir evolucao gradual.
+
+A fundacao transversal nao muda a prioridade da fase: Knowledge recebe
+profundidade primeiro.
+
 ## Fase 2: Biblioteca pessoal
 
 Objetivo:
@@ -103,4 +112,3 @@ Possiveis entregas:
 - Cartas futuras.
 - Principios.
 - Materiais para filhos ou familia, se um dia fizer sentido.
-
