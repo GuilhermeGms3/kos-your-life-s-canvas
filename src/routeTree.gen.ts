@@ -16,6 +16,8 @@ import { Route as LegacyAcademyRouteImport } from './routes/legacy.academy'
 import { Route as LibraryKindleRouteImport } from './routes/library.kindle'
 import { Route as PillarsPillarIdRouteImport } from './routes/pillars.$pillarId'
 import { Route as StudyMediaRouteImport } from './routes/study_.media'
+import { Route as SystemBackupRouteImport } from './routes/system.backup'
+import { Route as LegacyAcademyNodeIdRouteImport } from './routes/legacy.academy_.$nodeId'
 import { Route as ApiIntegrationsCalibreStatusRouteImport } from './routes/api.integrations.calibre.status'
 
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +55,16 @@ const StudyMediaRoute = StudyMediaRouteImport.update({
   path: '/study/media',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SystemBackupRoute = SystemBackupRouteImport.update({
+  id: '/system/backup',
+  path: '/system/backup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegacyAcademyNodeIdRoute = LegacyAcademyNodeIdRouteImport.update({
+  id: '/legacy/academy_/$nodeId',
+  path: '/legacy/academy/$nodeId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiIntegrationsCalibreStatusRoute =
   ApiIntegrationsCalibreStatusRouteImport.update({
     id: '/api/integrations/calibre/status',
@@ -68,6 +80,8 @@ export interface FileRoutesByFullPath {
   '/library/kindle': typeof LibraryKindleRoute
   '/pillars/$pillarId': typeof PillarsPillarIdRoute
   '/study/media': typeof StudyMediaRoute
+  '/system/backup': typeof SystemBackupRoute
+  '/legacy/academy/$nodeId': typeof LegacyAcademyNodeIdRoute
   '/api/integrations/calibre/status': typeof ApiIntegrationsCalibreStatusRoute
 }
 export interface FileRoutesByTo {
@@ -78,6 +92,8 @@ export interface FileRoutesByTo {
   '/library/kindle': typeof LibraryKindleRoute
   '/pillars/$pillarId': typeof PillarsPillarIdRoute
   '/study/media': typeof StudyMediaRoute
+  '/system/backup': typeof SystemBackupRoute
+  '/legacy/academy/$nodeId': typeof LegacyAcademyNodeIdRoute
   '/api/integrations/calibre/status': typeof ApiIntegrationsCalibreStatusRoute
 }
 export interface FileRoutesById {
@@ -89,6 +105,8 @@ export interface FileRoutesById {
   '/library/kindle': typeof LibraryKindleRoute
   '/pillars/$pillarId': typeof PillarsPillarIdRoute
   '/study_/media': typeof StudyMediaRoute
+  '/system/backup': typeof SystemBackupRoute
+  '/legacy/academy_/$nodeId': typeof LegacyAcademyNodeIdRoute
   '/api/integrations/calibre/status': typeof ApiIntegrationsCalibreStatusRoute
 }
 export interface FileRouteTypes {
@@ -101,6 +119,8 @@ export interface FileRouteTypes {
     | '/library/kindle'
     | '/pillars/$pillarId'
     | '/study/media'
+    | '/system/backup'
+    | '/legacy/academy/$nodeId'
     | '/api/integrations/calibre/status'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -111,6 +131,8 @@ export interface FileRouteTypes {
     | '/library/kindle'
     | '/pillars/$pillarId'
     | '/study/media'
+    | '/system/backup'
+    | '/legacy/academy/$nodeId'
     | '/api/integrations/calibre/status'
   id:
     | '__root__'
@@ -121,6 +143,8 @@ export interface FileRouteTypes {
     | '/library/kindle'
     | '/pillars/$pillarId'
     | '/study_/media'
+    | '/system/backup'
+    | '/legacy/academy_/$nodeId'
     | '/api/integrations/calibre/status'
   fileRoutesById: FileRoutesById
 }
@@ -132,6 +156,8 @@ export interface RootRouteChildren {
   LibraryKindleRoute: typeof LibraryKindleRoute
   PillarsPillarIdRoute: typeof PillarsPillarIdRoute
   StudyMediaRoute: typeof StudyMediaRoute
+  SystemBackupRoute: typeof SystemBackupRoute
+  LegacyAcademyNodeIdRoute: typeof LegacyAcademyNodeIdRoute
   ApiIntegrationsCalibreStatusRoute: typeof ApiIntegrationsCalibreStatusRoute
 }
 
@@ -186,6 +212,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudyMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/system/backup': {
+      id: '/system/backup'
+      path: '/system/backup'
+      fullPath: '/system/backup'
+      preLoaderRoute: typeof SystemBackupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legacy/academy_/$nodeId': {
+      id: '/legacy/academy_/$nodeId'
+      path: '/legacy/academy/$nodeId'
+      fullPath: '/legacy/academy/$nodeId'
+      preLoaderRoute: typeof LegacyAcademyNodeIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/integrations/calibre/status': {
       id: '/api/integrations/calibre/status'
       path: '/api/integrations/calibre/status'
@@ -204,6 +244,8 @@ const rootRouteChildren: RootRouteChildren = {
   LibraryKindleRoute: LibraryKindleRoute,
   PillarsPillarIdRoute: PillarsPillarIdRoute,
   StudyMediaRoute: StudyMediaRoute,
+  SystemBackupRoute: SystemBackupRoute,
+  LegacyAcademyNodeIdRoute: LegacyAcademyNodeIdRoute,
   ApiIntegrationsCalibreStatusRoute: ApiIntegrationsCalibreStatusRoute,
 }
 export const routeTree = rootRouteImport

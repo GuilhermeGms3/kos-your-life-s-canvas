@@ -28,13 +28,16 @@ A Academia do Legado transforma conhecimento em uma experiencia transmissivel:
 - Recompensas.
 - Arquivos liberados.
 - Grafo de conexoes.
+- Salas profundas para cada nucleo.
+- Evidencias de dominio e revisao posterior.
 
 ## Modos da Academia
 
 ### Aprender
 
-O estudante percorre a trilha, conclui nucleos e recebe acesso ao que foi
-preparado.
+O estudante percorre a trilha e entra em uma unidade propria. A conclusao exige
+material estudado, anotacao, perguntas, desafio e revisao; nao existe mais um
+botao isolado de "marcar como concluido".
 
 ### Lecionar
 
@@ -44,7 +47,7 @@ Cofre.
 O atlas inicial possui arvores fixas, mas independentes. Cada arvore progride
 por fundacao, base academica, nucleo universitario, aprofundamento,
 especializacao e pesquisa. A edicao autoral de nucleos e dependencias entra
-depois dessa base.
+depois dessa base. O contrato detalhado esta em `LEARNING_UNITS.md`.
 
 ## Atlas academico inicial
 
@@ -82,8 +85,9 @@ representam relacoes intelectuais entre conceitos, metodos, praticas e campos de
 pesquisa. A referencia estrutural e uma formacao liberal ampla antes da
 especializacao profunda.
 
-## Perfis futuros
+## Perfis locais
 
-O progresso atual e pessoal. Antes de ser usado por filhos ou outras pessoas, o
-KOS deve adicionar perfis locais separados, idade ou nivel, politicas de acesso
-e escolhas explicitas sobre o que cada perfil pode abrir.
+O KOS separa localmente o progresso e as unidades por perfil. O perfil principal
+preserva o percurso pessoal anterior, e novos perfis podem ser criados para
+filhos. Idade, politicas de acesso e escolhas sobre quais arquivos cada perfil
+pode abrir ainda precisam de uma camada parental posterior.

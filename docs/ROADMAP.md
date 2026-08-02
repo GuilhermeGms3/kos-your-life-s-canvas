@@ -31,6 +31,10 @@ Entregas:
 - Sessoes de estudo.
 - Busca simples.
 - Primeira reformulacao da home para acoes reais.
+- Backup e restauracao local completa.
+- Perfis locais de aprendizagem.
+- Unidade de aprendizagem com materiais, notas, pratica, desafio e revisao.
+- Trilha piloto profunda de Matematica.
 
 Fundacao transversal incluida:
 

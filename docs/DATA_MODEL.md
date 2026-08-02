@@ -143,6 +143,38 @@ Tipos sugeridos:
 - `connection`
 - `open_reflection`
 
+### LearningProfile
+
+Identidade local que isola o percurso de aprendizagem.
+
+Campos iniciais:
+
+- `id`
+- `name`
+- `kind`
+- `createdAt`
+
+### LearningUnitState
+
+Estado de uma unidade academica para um perfil.
+
+Campos iniciais:
+
+- `nodeId`
+- `profileId`
+- `materialAssetIds`
+- `primaryAssetId`
+- `note`
+- `teacherExplanation`
+- `customObjectives`
+- `challengePrompt`
+- `challengeEvidence`
+- `materialStudied`
+- `reviewDueAt`
+- `reviewCompletedAt`
+- `attempts`
+- `updatedAt`
+
 ## Relacoes importantes
 
 - Uma nota pode pertencer a muitos conceitos.
@@ -150,6 +182,8 @@ Tipos sugeridos:
 - Um conceito pode atravessar varios livros.
 - Uma sessao de estudo pode gerar notas, conceitos e perguntas.
 - Uma pergunta deve sempre apontar para a fonte que a originou.
+- Uma unidade pertence a um perfil e referencia arquivos do Cofre por ID.
+- Um nucleo so e dominado quando suas evidencias e pre-requisitos estao completos.
 
 ## Regra de ouro
 

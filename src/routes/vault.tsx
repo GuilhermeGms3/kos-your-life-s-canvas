@@ -13,6 +13,7 @@ import {
   Package,
   Save,
   Search,
+  ShieldCheck,
   Upload,
 } from "lucide-react";
 import type { ComponentType, ChangeEvent } from "react";
@@ -178,16 +179,20 @@ function FileVault() {
           </div>
           <div className="flex flex-col gap-3 xl:items-end">
             <KosSystemNav active="vault" />
-            <Button
-              asChild
-              variant="outline"
-              className="self-start rounded-full bg-surface xl:self-end"
-            >
-              <Link to="/library/kindle">
-                <BookMarked className="h-4 w-4" />
-                Oficina Kindle
-              </Link>
-            </Button>
+            <div className="flex flex-wrap gap-2 xl:justify-end">
+              <Button asChild variant="outline" className="rounded-full bg-surface">
+                <Link to="/system/backup">
+                  <ShieldCheck className="h-4 w-4" />
+                  Backup
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-full bg-surface">
+                <Link to="/library/kindle">
+                  <BookMarked className="h-4 w-4" />
+                  Oficina Kindle
+                </Link>
+              </Button>
+            </div>
           </div>
         </header>
 

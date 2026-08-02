@@ -15,6 +15,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { KosSystemNav } from "@/components/kos-system-nav";
+import { LearningProfileControl } from "@/components/learning-profile-control";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,6 +27,8 @@ import {
   type AcademyNode,
   type AcademyState,
 } from "@/kos";
+import type { LearningProfile, LearningProfileKind } from "@/kos";
+import { getAcademyProfileFallback, useLearningProfiles } from "@/kos/learning-profiles";
 import { useKosLocalState } from "@/kos/use-kos-local-state";
 
 export const Route = createFileRoute("/legacy/academy")({
@@ -58,14 +61,38 @@ const STAGE_LABELS: Record<number, string> = {
 };
 
 function LegacyAcademy() {
+  const { profiles, activeProfile, setActiveProfileId, createProfile } = useLearningProfiles();
+
+  return (
+    <AcademyForProfile
+      key={activeProfile.id}
+      profile={activeProfile}
+      profiles={profiles}
+      onSelectProfile={setActiveProfileId}
+      onCreateProfile={createProfile}
+    />
+  );
+}
+
+function AcademyForProfile({
+  profile,
+  profiles,
+  onSelectProfile,
+  onCreateProfile,
+}: {
+  profile: LearningProfile;
+  profiles: LearningProfile[];
+  onSelectProfile: (id: string) => void;
+  onCreateProfile: (name: string, kind?: LearningProfileKind) => LearningProfile | null;
+}) {
   const { assets } = useVaultAssets();
   const [mode, setMode] = useState<AcademyMode>("learn");
   const [disciplineId, setDisciplineId] = useState(ACADEMY_DISCIPLINES[0].id);
   const [selectedId, setSelectedId] = useState(ACADEMY_DISCIPLINES[0].nodes[0].id);
   const [search, setSearch] = useState("");
   const [academyState, setAcademyState] = useKosLocalState<AcademyState>(
-    "kos.legacy.academy",
-    DEFAULT_STATE,
+    `kos.legacy.academy.${profile.id}`,
+    profile.id === "self" ? getAcademyProfileFallback(profile.id) : DEFAULT_STATE,
   );
 
   const discipline =
@@ -98,14 +125,6 @@ function LegacyAcademy() {
   function selectDiscipline(next: AcademyDiscipline) {
     setDisciplineId(next.id);
     setSelectedId(next.nodes[0].id);
-  }
-
-  function completeNode() {
-    if (!unlocked || completed) return;
-    setAcademyState({
-      ...academyState,
-      completedNodeIds: [...academyState.completedNodeIds, selected.id],
-    });
   }
 
   function linkReward(assetId: string) {
@@ -155,7 +174,16 @@ function LegacyAcademy() {
               <h1 className="serif mt-1 text-4xl leading-none md:text-6xl">Academia do Legado</h1>
             </div>
           </div>
-          <KosSystemNav active="academy" />
+          <div className="flex flex-col gap-3 xl:items-end">
+            <KosSystemNav active="academy" />
+            <LearningProfileControl
+              profiles={profiles}
+              activeProfileId={profile.id}
+              onSelect={onSelectProfile}
+              onCreate={onCreateProfile}
+              compact
+            />
+          </div>
         </header>
 
         <section className="mt-8 grid gap-6 border-y border-foreground/15 py-6 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -383,28 +411,25 @@ function LegacyAcademy() {
 
             {mode === "learn" ? (
               <div className="mt-6 space-y-3">
-                <Button
-                  type="button"
-                  onClick={completeNode}
-                  disabled={!unlocked || completed}
-                  className="h-12 w-full rounded-full"
-                >
-                  {completed ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Concluido
-                    </>
-                  ) : unlocked ? (
-                    <>
-                      <GraduationCap className="h-4 w-4" />
-                      Marcar como concluido
-                    </>
-                  ) : (
-                    <>
-                      <LockKeyhole className="h-4 w-4" />
-                      Pre-requisitos pendentes
-                    </>
-                  )}
+                <Button asChild className="h-12 w-full rounded-none">
+                  <Link to="/legacy/academy/$nodeId" params={{ nodeId: selected.id }}>
+                    {completed ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Rever unidade dominada
+                      </>
+                    ) : unlocked ? (
+                      <>
+                        <GraduationCap className="h-4 w-4" />
+                        Entrar na unidade
+                      </>
+                    ) : (
+                      <>
+                        <LockKeyhole className="h-4 w-4" />
+                        Ver unidade bloqueada
+                      </>
+                    )}
+                  </Link>
                 </Button>
                 {completed && linkedReward && (
                   <Button
@@ -420,6 +445,16 @@ function LegacyAcademy() {
               </div>
             ) : (
               <div className="mt-6 grid gap-3">
+                <Button asChild className="h-11 rounded-none">
+                  <Link
+                    to="/legacy/academy/$nodeId"
+                    params={{ nodeId: selected.id }}
+                    search={{ mode: "teach" }}
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    Preparar unidade
+                  </Link>
+                </Button>
                 <Button asChild variant="outline" className="h-11 rounded-full bg-surface">
                   <Link to="/vault">
                     <BookOpen className="h-4 w-4" />

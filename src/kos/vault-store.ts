@@ -147,6 +147,32 @@ export async function getVaultAssetBlob(id: string) {
   }
 }
 
+export async function replaceVaultContents(assets: VaultAsset[], blobs: ReadonlyMap<string, Blob>) {
+  const missingBlob = assets.find((asset) => !blobs.has(asset.id));
+  if (missingBlob) {
+    throw new Error(`O arquivo "${missingBlob.name}" nao esta presente no pacote de backup.`);
+  }
+
+  const database = await openVaultDatabase();
+  try {
+    const transaction = database.transaction([ASSET_STORE, BLOB_STORE], "readwrite");
+    const assetStore = transaction.objectStore(ASSET_STORE);
+    const blobStore = transaction.objectStore(BLOB_STORE);
+
+    assetStore.clear();
+    blobStore.clear();
+
+    for (const asset of assets) {
+      assetStore.put(asset);
+      blobStore.put(blobs.get(asset.id), asset.id);
+    }
+
+    await transactionDone(transaction);
+  } finally {
+    database.close();
+  }
+}
+
 export function useVaultAssets() {
   const [assets, setAssets] = useState<VaultAsset[]>([]);
   const [loading, setLoading] = useState(true);
